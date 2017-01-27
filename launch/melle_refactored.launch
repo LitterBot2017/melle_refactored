@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <launch>
 
+  <include file="$(find melle_obstacle_avoidance)/launch/melle_ob_av.launch"/>
   <node name="pc_node" pkg="melle_refactored" type="melle_refactored">
   </node>
 

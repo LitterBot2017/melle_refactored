@@ -4,6 +4,7 @@
 #include "std_msgs/Bool.h"
 #include "std_msgs/Int32.h"
 #include "std_msgs/Int16.h"
+#include "melle_obstacle_avoidance/ObAvData.h"
 #include "geometry_msgs/Twist.h"
 #include <sensor_msgs/Joy.h>
 #include "melle_refactored/MellE_msg.h"
@@ -206,14 +207,14 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 }
 
 //Ob_av_callback to change from ob_av_msg to motor commands
-void ob_av_callback(const std_msgs::Int32 ob_av_msg)
+void ob_av_callback(const melle_obstacle_avoidance::ObAvData ob_av_msg)
 {
 	msg_to_send.waypoint_id = 80;
 	if(curr_state != OBSTACLE_AVOIDANCE)
 	{
 		return;
 	}
-	int command = ob_av_msg.data;
+	int command = ob_av_msg.command;
 	switch (command) {
 	    case 0:
 	      left_motor = 80;

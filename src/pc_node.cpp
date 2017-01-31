@@ -11,7 +11,6 @@
 #include "melle_refactored/PC_msg.h"
 #include "PID.h"
 #include "PID_horz.h"
-using namespace std;
 
 //States
 #define GET_GPS_LOCK 1
@@ -21,9 +20,9 @@ using namespace std;
 int curr_state = GET_GPS_LOCK;
 
 //GPS_Waypoints
-float lat_list [] = {40.442172,40.442018,40.442122};
-float long_list [] = {-79.945352,-79.945370,-79.945629};
-int curr_ind=0;
+float lat_list [] = { 40.442172, 40.442018, 40.442122 };
+float long_list [] = { -79.945352, -79.945370, -79.945629 };
+int curr_ind = 0;
 
 //GPS_Stuff
 #define TWO_PI 6.283185307179586476925286766559
@@ -32,6 +31,7 @@ int curr_ind=0;
 #define radians(deg) ((deg)*DEG_TO_RAD)
 #define degrees(rad) ((rad)*RAD_TO_DEG)
 #define sq(x) ((x)*(x))
+
 float curr_lat;
 float curr_long;
 float curr_heading;
@@ -59,8 +59,8 @@ melle_refactored::PC_msg msg_to_send;
 //Motor_controller calculator and PID
 #define MAX_TURNING_SPEED 20
 #define MAX_FORWARD_SPEED 50
-PID turn_pid = PID(0, 10, 0.01, 0, 0, MAX_TURNING_SPEED, -MAX_TURNING_SPEED);
-PID_horz forward_pid = PID_horz(0, 10, 0.01, 0, 0, MAX_FORWARD_SPEED, -MAX_FORWARD_SPEED);
+PID turn_pid = PID(0, 10, 0.01, 0, 0, MAX_TURNING_SPEED, -1 * MAX_TURNING_SPEED);
+PID_horz forward_pid = PID_horz(0, 10, 0.01, 0, 0, MAX_FORWARD_SPEED, -1 * MAX_FORWARD_SPEED);
 float left_motor;
 float right_motor;
 
@@ -84,28 +84,23 @@ void calculate_motor_speed()
 		msg_to_send.waypoint_id = left_motor;
 		float turn_speed = turn_pid.getNewValue(curr_heading, head_to_dest, elapsedTime);
 		float forward_speed = forward_pid.getNewValue(dis_to_dest, elapsedTime);
-		turn_speed=(turn_speed/128)*64;
-		forward_speed=(forward_speed/128)*64;
-		left_motor=64+turn_speed+forward_speed;
-		right_motor=64-turn_speed+forward_speed;
-		if(left_motor>89)
-		{
-			left_motor=89;
+		turn_speed = (turn_speed/128) * 64;
+		forward_speed = (forward_speed/128) * 64;
+		left_motor =  64 + turn_speed + forward_speed;
+		right_motor = 64 - turn_speed + forward_speed;
+		if(left_motor > 89) {
+			left_motor = 89;
 		}
-		if(left_motor<39)
-		{
-			left_motor=39;
+		if(left_motor < 39) {
+			left_motor = 39;
 		}
-		if(right_motor>89)
-		{
-			right_motor=89;
+		if(right_motor > 89) {
+			right_motor = 89;
 		}
-			if(right_motor<39)
-		{
-			right_motor=39;
+		if(right_motor < 39) {
+			right_motor = 39;
 		}
-		if (dis_to_dest<3)
-		{
+		if (dis_to_dest < 3) {
 			right_motor=64;
 			left_motor=64;
 		}
@@ -115,7 +110,7 @@ void calculate_motor_speed()
 //GPS distance and angle calculation
 double distanceBetween(double lat1, double long1, double lat2, double long2)
 {
-  double delta = radians(long1-long2);
+  double delta = radians(long1 - long2);
   double sdlong = sin(delta);
   double cdlong = cos(delta);
   lat1 = radians(lat1);
@@ -160,7 +155,7 @@ void melle_callback(const melle_refactored::MellE_msg msg)
 	curr_long = msg.curr_long;
 	curr_lat = msg.curr_lat;
 	msg_to_send.waypoint_id = 10;
-	elapsedTime = elapsedTime-msg.elapsed_time;
+	elapsedTime = elapsedTime - msg.elapsed_time;
 	dis_to_dest = distanceBetween(dest_lat, dest_long, curr_lat, curr_long);
 	head_to_dest = courseTo(dest_lat, dest_long, curr_lat, curr_long);
 	if (msg.sats != 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT))
@@ -171,10 +166,10 @@ void melle_callback(const melle_refactored::MellE_msg msg)
 	if (msg.sats == 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT))
 	{
 		curr_state = MOVE_TO_WAYPOINT;
-		msg_to_send.waypoint_id = 30;
-		calculate_motor_speed();
+		msg_to_send.waypoint_id = 30;		
 	}
-	if(dis_to_dest<3)
+	calculate_motor_speed();
+	if(dis_to_dest < 3)
 	{
 		curr_ind++;
 		dest_lat = lat_list[curr_ind % 3];
@@ -242,9 +237,9 @@ int main(int argc, char **argv)
   //Publisher registration
   base_pub = n.advertise<melle_refactored::PC_msg>("PC_msg", 1000);
   //Subscriber registration
-  melle_sub = n.subscribe("MellE_msg",1000,melle_callback);
-  joystick_sub = n.subscribe("joy",1000,joystick_callback);
-  ob_av_sub =n.subscribe("ob_av_msg",1000,ob_av_callback);
+  melle_sub = n.subscribe("MellE_msg", 1000, melle_callback);
+  joystick_sub = n.subscribe("joy", 1000, joystick_callback);
+  ob_av_sub =n.subscribe("ob_av_msg", 1000, ob_av_callback);
   ros::Rate loop_rate(1);
 
   while(ros::ok())

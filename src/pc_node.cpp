@@ -86,8 +86,32 @@ void calculate_motor_speed()
 		float forward_speed = forward_pid.getNewValue(dis_to_dest, elapsedTime);
 		turn_speed = (turn_speed/128) * 64;
 		forward_speed = (forward_speed/128) * 64;
-		left_motor =  64 + turn_speed + forward_speed;
-		right_motor = 64 - turn_speed + forward_speed;
+		if (abs(curr_heading - head_to_dest) > 30)
+  		{
+    		if (turn_speed >= 0)
+    		{
+    		  	left_motor =  64 + turn_speed;
+  				right_motor = 64 - turn_speed;
+    		}
+    		else
+    		{
+      			left_motor =  64 - turn_speed;
+  				right_motor = 64 + turn_speed;
+    		}
+  		}
+		else
+  		{
+    		if (forward_speed >= 0)
+    		{
+      			left_motor =  64 + forward_speed;
+  				right_motor = 64 + forward_speed;
+    		}
+    		else
+    		{
+      			left_motor =  64 - forward_speed;
+  				right_motor = 64 - forward_speed;
+    		}
+  		}
 		if(left_motor > 89) {
 			left_motor = 89;
 		}

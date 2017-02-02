@@ -239,7 +239,7 @@ int main(int argc, char **argv)
   //Subscriber registration
   melle_sub = n.subscribe("MellE_msg", 1000, melle_callback);
   joystick_sub = n.subscribe("joy", 1000, joystick_callback);
-  ob_av_sub =n.subscribe("ob_av_msg", 1000, ob_av_callback);
+  ob_av_sub =n.subscribe("ob_av_data", 1000, ob_av_callback);
   ros::Rate loop_rate(1);
 
   while(ros::ok())

@@ -200,8 +200,8 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 		return;
 	}
 
-	float turn_speed = joy->axes[3]*8;
-	float forward_speed = joy->axes[0]*10;
+	float turn_speed = joy->axes[2]*8;
+	float forward_speed = joy->axes[1]*10;
 	left_motor = 64 + forward_speed + turn_speed;
 	right_motor = 64 + forward_speed - turn_speed;
 }
@@ -244,8 +244,8 @@ int main(int argc, char **argv)
   //Subscriber registration
   melle_sub = n.subscribe("MellE_msg",1000,melle_callback);
   joystick_sub = n.subscribe("joy",1000,joystick_callback);
-  ob_av_sub =n.subscribe("ob_av_msg",1000,ob_av_callback);
-  ros::Rate loop_rate(1);
+  ob_av_sub =n.subscribe("ob_av_data",1000,ob_av_callback);
+  ros::Rate loop_rate(10);
 
   while(ros::ok())
   {

@@ -41,6 +41,8 @@ long elapsedTime;
 float dis_to_dest;
 float head_to_dest;
 
+int max_speed_teleop=20;
+
 //Diagnostic data
 float batt_level;
 float bin_fullness;
@@ -180,8 +182,8 @@ void melle_callback(const melle_refactored::MellE_msg msg)
 	curr_lat = msg.curr_lat;
 	msg_to_send.waypoint_id = 10;
 	elapsedTime = elapsedTime - msg.elapsed_time;
-	dis_to_dest = distanceBetween(dest_lat, dest_long, curr_lat, curr_long);
-	head_to_dest = courseTo(dest_lat, dest_long, curr_lat, curr_long);
+	dis_to_dest = distanceBetween(curr_lat, curr_long, dest_lat, dest_long);
+	head_to_dest = courseTo(curr_lat, curr_long, dest_lat, dest_long);
 	if (msg.sats != 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT))
 	{
 		curr_state = GET_GPS_LOCK;
@@ -218,11 +220,15 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 	{
 		return;
 	}
+    if(curr_state == JOYSTICK && joy->buttons[7])
+    	max_speed_teleop ++;
+    if(curr_state == JOYSTICK && joy->buttons[6])
+    	max_speed_teleop --;
 
 	float turn_speed = joy->axes[2]*8;
-	float forward_speed = joy->axes[1]*10;
-	left_motor = 64 + forward_speed + turn_speed;
-	right_motor = 64 + forward_speed - turn_speed;
+	float forward_speed = joy->axes[1]*max_speed_teleop;
+	left_motor = (64 + forward_speed - turn_speed);
+	right_motor =(64 + forward_speed + turn_speed);
 }
 
 //Ob_av_callback to change from ob_av_msg to motor commands

@@ -20,8 +20,8 @@
 int curr_state = GET_GPS_LOCK;
 
 //GPS_Waypoints
-float lat_list [] = { 40.442172, 40.442018, 40.442122 };
-float long_list [] = { -79.945352, -79.945370, -79.945629 };
+float lat_list [] = { 40.4430160522, 40.4429855347};
+float long_list [] = { -79.9451751709, -79.9449768066 };
 int curr_ind = 0;
 
 //GPS_Stuff
@@ -88,17 +88,17 @@ void calculate_motor_speed()
 		float forward_speed = forward_pid.getNewValue(dis_to_dest, elapsedTime);
 		turn_speed = (turn_speed/128) * 64;
 		forward_speed = (forward_speed/128) * 64;
-		if (abs(curr_heading - head_to_dest) > 30)
+		if (abs(curr_heading - head_to_dest) > 20)
   		{
     		if (turn_speed >= 0)
     		{
-    		  	left_motor =  64 + turn_speed;
-  				right_motor = 64 - turn_speed;
+    		  	left_motor =  64 - turn_speed;
+  				right_motor = 64 + turn_speed;
     		}
     		else
     		{
-      			left_motor =  64 - turn_speed;
-  				right_motor = 64 + turn_speed;
+      			left_motor =  64 + turn_speed;
+  				right_motor = 64 - turn_speed;
     		}
   		}
 		else
@@ -171,13 +171,18 @@ double courseTo(double lat1, double long1, double lat2, double long2)
   {
     a2 += TWO_PI;
   }
-  return degrees(a2);
+  double turn_to_degrees=degrees(a2);
+  if(turn_to_degrees>180)
+  	turn_to_degrees=turn_to_degrees-360;
+  return turn_to_degrees;
 }
 
 //MellE Callback
 void melle_callback(const melle_refactored::MellE_msg msg)
 {
 	curr_heading = msg.heading;
+	if(curr_heading>180)
+		curr_heading=curr_heading-360;
 	curr_long = msg.curr_long;
 	curr_lat = msg.curr_lat;
 	msg_to_send.waypoint_id = 10;
@@ -198,8 +203,8 @@ void melle_callback(const melle_refactored::MellE_msg msg)
 	if(dis_to_dest < 3)
 	{
 		curr_ind++;
-		dest_lat = lat_list[curr_ind % 3];
-		dest_long = long_list[curr_ind %3];
+		dest_lat = lat_list[curr_ind % 2];
+		dest_long = long_list[curr_ind %2];
 	}
 	batt_level = msg.battery;
 	bin_fullness = msg.bin_fullness;
@@ -276,8 +281,8 @@ int main(int argc, char **argv)
   {
   	msg_to_send.l_motor_val = left_motor;
     msg_to_send.r_motor_val = right_motor;
-    msg_to_send.dest_lat = dest_lat;
-    msg_to_send.dest_long = dest_long;
+    msg_to_send.dest_lat = head_to_dest;
+    msg_to_send.dest_long = dis_to_dest;
     msg_to_send.waypoint_id = curr_state;
     ros::spinOnce();
     loop_rate.sleep();

@@ -15,6 +15,7 @@ add_message_files(
   FILES
   MellE_msg.msg
   PC_msg.msg
+  Debug_msg.msg
 )
 
 generate_messages(

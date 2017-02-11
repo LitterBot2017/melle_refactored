@@ -9,6 +9,7 @@
 #include <sensor_msgs/Joy.h>
 #include "melle_refactored/MellE_msg.h"
 #include "melle_refactored/PC_msg.h"
+#include "melle_refactored/Debug_msg.h"
 #include "PID.h"
 #include "PID_horz.h"
 
@@ -40,12 +41,17 @@ float dest_long = long_list[curr_ind];
 long elapsedTime;
 float dis_to_dest;
 float head_to_dest;
+float speed;
+int sats;
 
 int max_speed_teleop=20;
 
 //Diagnostic data
 float batt_level;
 float bin_fullness;
+
+//Debug mode
+bool enable_debug_mode=false;
 
 //Subscribers
 ros::Subscriber melle_sub; 
@@ -54,9 +60,11 @@ ros::Subscriber ob_av_sub;
 
 //Publishers
 ros::Publisher base_pub;
+ros::Publisher debug_pub;
 
 //Publisher msgs
 melle_refactored::PC_msg msg_to_send;
+melle_refactored::Debug_msg debug_msg;
 
 //Motor_controller calculator and PID
 #define MAX_TURNING_SPEED 20
@@ -65,6 +73,30 @@ PID turn_pid = PID(0, 10, 0.01, 0, 0, MAX_TURNING_SPEED, -1 * MAX_TURNING_SPEED)
 PID_horz forward_pid = PID_horz(0, 10, 0.01, 0, 0, MAX_FORWARD_SPEED, -1 * MAX_FORWARD_SPEED);
 float left_motor;
 float right_motor;
+
+//Debug message creator
+void publish_debug_msg(float c_lat,float c_long, int run_time,int satellites,float gps_odom,float direction,
+						int bin_diag, int batt_level_read, float l_motor, float r_motor, float d_lat, float d_long,
+						int way_id, float bearing, float dist_away, float head_error, int current_state)
+{
+	debug_msg.curr_lat =c_lat;
+	debug_msg.curr_long = c_long;
+	debug_msg.elapsed_time = run_time;
+	debug_msg.sats = satellites;
+	debug_msg.speed_val = gps_odom;
+	debug_msg.heading = direction;
+	debug_msg.bin_fullness = bin_diag;
+	debug_msg.battery = batt_level_read;
+	debug_msg.l_motor = l_motor;
+	debug_msg.r_motor = r_motor;
+	debug_msg.dest_lat = d_lat;
+	debug_msg.dest_long = d_long;
+	debug_msg.waypoint_id = way_id;
+	debug_msg.head_to_dest = bearing;
+	debug_msg.dist_to_dest = dist_away;
+	debug_msg.head_error = head_error;
+	debug_msg.current_state = current_state;
+}
 
 void calculate_motor_speed()
 {
@@ -185,6 +217,8 @@ void melle_callback(const melle_refactored::MellE_msg msg)
 		curr_heading=curr_heading-360;
 	curr_long = msg.curr_long;
 	curr_lat = msg.curr_lat;
+	speed = msg.speed_val;
+	sats=msg.sats;
 	msg_to_send.waypoint_id = 10;
 	elapsedTime = elapsedTime - msg.elapsed_time;
 	dis_to_dest = distanceBetween(curr_lat, curr_long, dest_lat, dest_long);
@@ -220,6 +254,17 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 		curr_state = OBSTACLE_AVOIDANCE;
 	else if(joy->buttons[2])
 		curr_state = JOYSTICK;
+	else if(joy->buttons[3])
+	{
+		if(enable_debug_mode)
+		{
+			enable_debug_mode=false;
+		}
+		else
+		{
+			enable_debug_mode=true;
+		}
+	}
 
 	if(curr_state != JOYSTICK)
 	{
@@ -251,12 +296,12 @@ void ob_av_callback(const melle_obstacle_avoidance::ObAvData ob_av_msg)
 	      right_motor = 80;
 	      break;
 	    case 1:
-	      left_motor = 64;
-	      right_motor = 80;
-	      break;
-	    case 2:
 	      left_motor = 80;
 	      right_motor = 64;
+	      break;
+	    case 2:
+	      left_motor = 64;
+	      right_motor = 80;
 	      break;
 	    case 3:
 	      left_motor = 64;
@@ -271,6 +316,7 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
   //Publisher registration
   base_pub = n.advertise<melle_refactored::PC_msg>("PC_msg", 1000);
+  debug_pub = n.advertise<melle_refactored::Debug_msg>("Debug_msg", 1000);
   //Subscriber registration
   melle_sub = n.subscribe("MellE_msg",1000,melle_callback);
   joystick_sub = n.subscribe("joy",1000,joystick_callback);
@@ -284,6 +330,13 @@ int main(int argc, char **argv)
     msg_to_send.dest_lat = head_to_dest;
     msg_to_send.dest_long = dis_to_dest;
     msg_to_send.waypoint_id = curr_state;
+    if(enable_debug_mode)
+    {
+    	publish_debug_msg(curr_lat,curr_long, elapsedTime,sats,speed,curr_heading,
+						bin_fullness,batt_level, left_motor, right_motor, dest_lat, dest_long,
+						curr_ind, head_to_dest, dis_to_dest, curr_heading-head_to_dest, curr_state);
+    	debug_pub.publish(debug_msg);
+    }	
     ros::spinOnce();
     loop_rate.sleep();
     base_pub.publish(msg_to_send);

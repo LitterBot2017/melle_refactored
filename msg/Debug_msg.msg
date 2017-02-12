@@ -20,3 +20,4 @@ float32 head_to_dest
 float32 dist_to_dest
 float32 head_error
 int16 current_state
+string downview_state

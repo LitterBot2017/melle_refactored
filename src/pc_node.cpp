@@ -10,14 +10,17 @@
 #include "melle_refactored/MellE_msg.h"
 #include "melle_refactored/PC_msg.h"
 #include "melle_refactored/Debug_msg.h"
+#include "downview_cam/po.h"
 #include "PID.h"
 #include "PID_horz.h"
+using namespace std;
 
 //States
 #define GET_GPS_LOCK 1
 #define MOVE_TO_WAYPOINT 2
 #define OBSTACLE_AVOIDANCE 3
 #define JOYSTICK 4
+#define DOWNVIEW_CAM 5
 int curr_state = GET_GPS_LOCK;
 
 //GPS_Waypoints
@@ -49,6 +52,7 @@ int max_speed_teleop=20;
 //Diagnostic data
 float batt_level;
 float bin_fullness;
+string downview_state;
 
 //Debug mode
 bool enable_debug_mode=false;
@@ -57,6 +61,7 @@ bool enable_debug_mode=false;
 ros::Subscriber melle_sub; 
 ros::Subscriber joystick_sub;
 ros::Subscriber ob_av_sub;
+ros::Subscriber downview_cam_sub;
 
 //Publishers
 ros::Publisher base_pub;
@@ -71,13 +76,13 @@ melle_refactored::Debug_msg debug_msg;
 #define MAX_FORWARD_SPEED 50
 PID turn_pid = PID(0, 10, 0.01, 0, 0, MAX_TURNING_SPEED, -1 * MAX_TURNING_SPEED);
 PID_horz forward_pid = PID_horz(0, 10, 0.01, 0, 0, MAX_FORWARD_SPEED, -1 * MAX_FORWARD_SPEED);
-float left_motor;
-float right_motor;
+float left_motor=64;
+float right_motor=64;
 
 //Debug message creator
 void publish_debug_msg(float c_lat,float c_long, int run_time,int satellites,float gps_odom,float direction,
 						int bin_diag, int batt_level_read, float l_motor, float r_motor, float d_lat, float d_long,
-						int way_id, float bearing, float dist_away, float head_error, int current_state)
+						int way_id, float bearing, float dist_away, float head_error, int current_state, string downview_state)
 {
 	debug_msg.curr_lat =c_lat;
 	debug_msg.curr_long = c_long;
@@ -96,6 +101,7 @@ void publish_debug_msg(float c_lat,float c_long, int run_time,int satellites,flo
 	debug_msg.dist_to_dest = dist_away;
 	debug_msg.head_error = head_error;
 	debug_msg.current_state = current_state;
+	debug_msg.downview_state = downview_state;
 }
 
 void calculate_motor_speed()
@@ -209,6 +215,56 @@ double courseTo(double lat1, double long1, double lat2, double long2)
   return turn_to_degrees;
 }
 
+void motor_turn(float x_pos, float y_pos, float* motor_l, float* motor_r )
+{
+	if(x_pos-640>50)
+	{
+		left_motor =  64 - 6;
+  		right_motor = 64 + 6;
+	}
+	else if(x_pos-640<50)
+	{
+		left_motor =  64 + 6;
+  		right_motor = 64 - 6;
+	}
+	if(x_pos<690 && x_pos>590)
+	{
+		if(y_pos-250>50)
+		{
+			left_motor =  64 - 6;
+  			right_motor = 64 - 6;
+		}
+		else if(y_pos-250<50)
+		{
+			left_motor =  64 + 6;
+  			right_motor = 64 + 6;
+		}
+	}	
+}
+
+//Downview Camera Callback
+void downview_cam_callback(const downview_cam::po msg)
+{
+	if(curr_state!=DOWNVIEW_CAM)
+		return;
+	downview_state=msg.command;
+	if(msg.command.compare("not_detected")==0)
+	{
+		left_motor = 75;
+	    right_motor = 75;
+	}
+	else if(msg.command.compare("detected")==0)
+	{
+		motor_turn(msg.x,msg.y,&left_motor,&right_motor);
+	}
+	else if(msg.command.compare("centered")==0)
+	{
+		left_motor=64;
+		right_motor=64;
+		curr_state=JOYSTICK;
+	}
+}
+
 //MellE Callback
 void melle_callback(const melle_refactored::MellE_msg msg)
 {
@@ -255,6 +311,8 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 	else if(joy->buttons[2])
 		curr_state = JOYSTICK;
 	else if(joy->buttons[3])
+		curr_state=DOWNVIEW_CAM;
+	else if(joy->buttons[9])
 	{
 		if(enable_debug_mode)
 		{
@@ -321,6 +379,7 @@ int main(int argc, char **argv)
   melle_sub = n.subscribe("MellE_msg",1000,melle_callback);
   joystick_sub = n.subscribe("joy",1000,joystick_callback);
   ob_av_sub =n.subscribe("ob_av_data",1000,ob_av_callback);
+  downview_cam_sub =n.subscribe("down_cam_msg",1000,downview_cam_callback);
   ros::Rate loop_rate(10);
 
   while(ros::ok())
@@ -334,7 +393,7 @@ int main(int argc, char **argv)
     {
     	publish_debug_msg(curr_lat,curr_long, elapsedTime,sats,speed,curr_heading,
 						bin_fullness,batt_level, left_motor, right_motor, dest_lat, dest_long,
-						curr_ind, head_to_dest, dis_to_dest, curr_heading-head_to_dest, curr_state);
+						curr_ind, head_to_dest, dis_to_dest, curr_heading-head_to_dest, curr_state, downview_state);
     	debug_pub.publish(debug_msg);
     }	
     ros::spinOnce();

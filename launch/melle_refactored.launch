@@ -2,6 +2,7 @@
 <launch>
 
   <include file="$(find melle_obstacle_avoidance)/launch/melle_ob_av.launch"/>
+  <include file="$(find downview_cam)/launch/downview_cam.launch"/>
   <node name="pc_node" pkg="melle_refactored" type="melle_refactored">
   </node>
 

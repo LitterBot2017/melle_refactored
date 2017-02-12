@@ -15,7 +15,7 @@
   <!-- Startup your modified apriltag wrapper node -->
   <!-- TODO -->
   <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
-  <param name="~port" value="/dev/ttyACM0" />
+  <param name="~port" value="/dev/arduino" />
   </node>
 
 </launch>

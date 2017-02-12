@@ -24,8 +24,8 @@ using namespace std;
 int curr_state = GET_GPS_LOCK;
 
 //GPS_Waypoints
-float lat_list [] = { 40.4430160522, 40.4429855347};
-float long_list [] = { -79.9451751709, -79.9449768066 };
+float lat_list [] = { 40.4421768188, 40.4420509338, 40.442111969};
+float long_list [] = { -79.9453964233, -79.9453735352,-79.9455795288 };
 int curr_ind = 0;
 
 //GPS_Stuff
@@ -92,8 +92,8 @@ void publish_debug_msg(float c_lat,float c_long, int run_time,int satellites,flo
 	debug_msg.heading = direction;
 	debug_msg.bin_fullness = bin_diag;
 	debug_msg.battery = batt_level_read;
-	debug_msg.l_motor = l_motor;
-	debug_msg.r_motor = r_motor;
+	//debug_msg.l_motor = l_motor;
+	//debug_msg.r_motor = r_motor;
 	debug_msg.dest_lat = d_lat;
 	debug_msg.dest_long = d_long;
 	debug_msg.waypoint_id = way_id;
@@ -121,36 +121,25 @@ void calculate_motor_speed()
 	}
 	else if(curr_state == MOVE_TO_WAYPOINT)
 	{
-		msg_to_send.waypoint_id = left_motor;
 		float turn_speed = turn_pid.getNewValue(curr_heading, head_to_dest, elapsedTime);
 		float forward_speed = forward_pid.getNewValue(dis_to_dest, elapsedTime);
-		turn_speed = (turn_speed/128) * 64;
-		forward_speed = (forward_speed/128) * 64;
-		if (abs(curr_heading - head_to_dest) > 20)
+		//debug_msg.r_motor=turn_speed;
+		//debug_msg.l_motor=forward_speed;
+		turn_speed = turn_speed/2;
+		forward_speed = forward_speed/2;
+		if (abs(curr_heading - head_to_dest) < 20)
   		{
-    		if (turn_speed >= 0)
-    		{
-    		  	left_motor =  64 - turn_speed;
-  				right_motor = 64 + turn_speed;
-    		}
-    		else
-    		{
-      			left_motor =  64 + turn_speed;
-  				right_motor = 64 - turn_speed;
-    		}
-  		}
-		else
-  		{
-    		if (forward_speed >= 0)
-    		{
-      			left_motor =  64 + forward_speed;
-  				right_motor = 64 + forward_speed;
-    		}
-    		else
-    		{
-      			left_motor =  64 - forward_speed;
-  				right_motor = 64 - forward_speed;
-    		}
+
+      		left_motor =  40;
+  			right_motor = 40;
+  		} else if (curr_heading - head_to_dest) {
+      		left_motor =  40;
+  			right_motor = 88;
+
+  		} else {
+
+      		left_motor =  88;
+  			right_motor = 40;
   		}
 		if(left_motor > 89) {
 			left_motor = 89;
@@ -210,8 +199,6 @@ double courseTo(double lat1, double long1, double lat2, double long2)
     a2 += TWO_PI;
   }
   double turn_to_degrees=degrees(a2);
-  if(turn_to_degrees>180)
-  	turn_to_degrees=turn_to_degrees-360;
   return turn_to_degrees;
 }
 
@@ -219,25 +206,25 @@ void motor_turn(float x_pos, float y_pos, float* motor_l, float* motor_r )
 {
 	if(x_pos-640>50)
 	{
-		left_motor =  64 - 6;
-  		right_motor = 64 + 6;
+		left_motor =  64 + 4;
+  		right_motor = 64 - 4;
 	}
 	else if(x_pos-640<50)
 	{
-		left_motor =  64 + 6;
-  		right_motor = 64 - 6;
+		left_motor =  64 - 4;
+  		right_motor = 64 + 4;
 	}
 	if(x_pos<690 && x_pos>590)
 	{
 		if(y_pos-250>50)
 		{
-			left_motor =  64 - 6;
-  			right_motor = 64 - 6;
+			left_motor =  64 - 3;
+  			right_motor = 64 - 3;
 		}
 		else if(y_pos-250<50)
 		{
-			left_motor =  64 + 6;
-  			right_motor = 64 + 6;
+			left_motor =  64 + 3;
+  			right_motor = 64 + 3;
 		}
 	}	
 }
@@ -269,8 +256,6 @@ void downview_cam_callback(const downview_cam::po msg)
 void melle_callback(const melle_refactored::MellE_msg msg)
 {
 	curr_heading = msg.heading;
-	if(curr_heading>180)
-		curr_heading=curr_heading-360;
 	curr_long = msg.curr_long;
 	curr_lat = msg.curr_lat;
 	speed = msg.speed_val;

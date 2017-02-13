@@ -44,6 +44,7 @@ float dest_long = long_list[curr_ind];
 long elapsedTime;
 float dis_to_dest;
 float head_to_dest;
+float obs_direction;
 float speed;
 int sats;
 
@@ -263,7 +264,7 @@ void melle_callback(const melle_refactored::MellE_msg msg)
 	msg_to_send.waypoint_id = 10;
 	elapsedTime = elapsedTime - msg.elapsed_time;
 	dis_to_dest = distanceBetween(curr_lat, curr_long, dest_lat, dest_long);
-	head_to_dest = courseTo(curr_lat, curr_long, dest_lat, dest_long);
+	head_to_dest = courseTo(curr_lat, curr_long, dest_lat, dest_long)-obs_direction;
 	if (msg.sats != 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT))
 	{
 		curr_state = GET_GPS_LOCK;
@@ -327,7 +328,7 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 //Ob_av_callback to change from ob_av_msg to motor commands
 void ob_av_callback(const melle_obstacle_avoidance::ObAvData ob_av_msg)
 {
-	msg_to_send.waypoint_id = 80;
+	obs_direction=ob_av_msg.direction;
 	if(curr_state != OBSTACLE_AVOIDANCE)
 	{
 		return;

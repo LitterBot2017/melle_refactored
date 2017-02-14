@@ -95,8 +95,8 @@ void publish_debug_msg(float c_lat,float c_long, int run_time,int satellites,flo
 	debug_msg.heading = direction;
 	debug_msg.bin_fullness = bin_diag;
 	debug_msg.battery = batt_level_read;
-	//debug_msg.l_motor = l_motor;
-	//debug_msg.r_motor = r_motor;
+	debug_msg.l_motor = l_motor;
+	debug_msg.r_motor = r_motor;
 	debug_msg.dest_lat = d_lat;
 	debug_msg.dest_long = d_long;
 	debug_msg.waypoint_id = way_id;

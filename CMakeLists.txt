@@ -34,4 +34,6 @@ include_directories(
 
 ## Declare a C++ executable
 add_executable(melle_refactored src/pc_node.cpp src/PID.cpp src/PID_horz.cpp)
+add_dependencies(melle_refactored ${catkin_EXPORTED_TARGETS})
+add_dependencies(melle_refactored melle_obstacle_avoidance_generate_messages_cpp)
 target_link_libraries(melle_refactored ${catkin_LIBRARIES} )

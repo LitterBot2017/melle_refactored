@@ -45,6 +45,8 @@ long elapsedTime;
 float dis_to_dest;
 float head_to_dest;
 float obs_direction;
+float obs_magnitude;
+float obs_magnitude_modifier=30;
 float speed;
 int sats;
 
@@ -83,7 +85,7 @@ float right_motor=64;
 //Debug message creator
 void publish_debug_msg(float c_lat,float c_long, int run_time,int satellites,float gps_odom,float direction,
 						int bin_diag, int batt_level_read, float l_motor, float r_motor, float d_lat, float d_long,
-						int way_id, float bearing, float dist_away, float head_error, int current_state, string downview_state)
+						int way_id, float bearing, float dist_away, float head_error, int current_state, string downview_state, float obs_modifier)
 {
 	debug_msg.curr_lat =c_lat;
 	debug_msg.curr_long = c_long;
@@ -103,6 +105,7 @@ void publish_debug_msg(float c_lat,float c_long, int run_time,int satellites,flo
 	debug_msg.head_error = head_error;
 	debug_msg.current_state = current_state;
 	debug_msg.downview_state = downview_state;
+	debug_msg.obs_modifier = obs_modifier;
 }
 
 void calculate_motor_speed()
@@ -128,20 +131,16 @@ void calculate_motor_speed()
 		//debug_msg.l_motor=forward_speed;
 		turn_speed = turn_speed/2;
 		forward_speed = forward_speed/2;
-		if (abs(curr_heading - head_to_dest) < 20)
+		if (abs(curr_heading - head_to_dest) > 20)
   		{
-
-      		left_motor =  40;
-  			right_motor = 40;
-  		} else if (curr_heading - head_to_dest) {
-      		left_motor =  40;
-  			right_motor = 88;
-
-  		} else {
-
-      		left_motor =  88;
-  			right_motor = 40;
-  		}
+  			left_motor = 64 - turn_speed;
+  			right_motor = 64 + turn_speed;
+		}
+		else
+		{
+			left_motor=64-forward_speed;
+			right_motor=64-forward_speed;
+		}
 		if(left_motor > 89) {
 			left_motor = 89;
 		}
@@ -238,8 +237,8 @@ void downview_cam_callback(const downview_cam::po msg)
 	downview_state=msg.command;
 	if(msg.command.compare("not_detected")==0)
 	{
-		left_motor = 75;
-	    right_motor = 75;
+		left_motor = 64;
+	    right_motor = 64;
 	}
 	else if(msg.command.compare("detected")==0)
 	{
@@ -264,7 +263,7 @@ void melle_callback(const melle_refactored::MellE_msg msg)
 	msg_to_send.waypoint_id = 10;
 	elapsedTime = elapsedTime - msg.elapsed_time;
 	dis_to_dest = distanceBetween(curr_lat, curr_long, dest_lat, dest_long);
-	head_to_dest = courseTo(curr_lat, curr_long, dest_lat, dest_long)-obs_direction;
+	head_to_dest = courseTo(curr_lat, curr_long, dest_lat, dest_long)-((obs_magnitude/obs_magnitude_modifier)*(obs_direction));
 	if (msg.sats != 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT))
 	{
 		curr_state = GET_GPS_LOCK;
@@ -289,7 +288,6 @@ void melle_callback(const melle_refactored::MellE_msg msg)
 //Joystick callback to switch from twist message to left and right motor commands
 void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 {
-	msg_to_send.waypoint_id = 70;
 	if(joy->buttons[0])
 		curr_state = GET_GPS_LOCK;
 	else if(joy->buttons[1])
@@ -309,6 +307,10 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 			enable_debug_mode=true;
 		}
 	}
+	else if(joy->buttons[15])
+		obs_magnitude_modifier+=2.5;
+	else if(joy->buttons[16])
+		obs_magnitude_modifier-=2.5;
 
 	if(curr_state != JOYSTICK)
 	{
@@ -329,6 +331,7 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 void ob_av_callback(const melle_obstacle_avoidance::ObAvData ob_av_msg)
 {
 	obs_direction=ob_av_msg.direction;
+	obs_magnitude=ob_av_msg.magnitude;
 	if(curr_state != OBSTACLE_AVOIDANCE)
 	{
 		return;
@@ -379,7 +382,7 @@ int main(int argc, char **argv)
     {
     	publish_debug_msg(curr_lat,curr_long, elapsedTime,sats,speed,curr_heading,
 						bin_fullness,batt_level, left_motor, right_motor, dest_lat, dest_long,
-						curr_ind, head_to_dest, dis_to_dest, curr_heading-head_to_dest, curr_state, downview_state);
+						curr_ind, head_to_dest, dis_to_dest, curr_heading-head_to_dest, curr_state, downview_state,obs_magnitude_modifier);
     	debug_pub.publish(debug_msg);
     }	
     ros::spinOnce();

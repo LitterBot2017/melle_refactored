@@ -24,7 +24,7 @@ using namespace std;
 int curr_state = GET_GPS_LOCK;
 
 //GPS_Waypoints
-float lat_list [] = { 40.4430160522, 40.4429855347};
+float lat_list [] = { 40.4430160522, 40.4429855348};
 float long_list [] = { -79.9451751709, -79.9449768066 };
 int curr_ind = 0;
 

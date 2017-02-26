@@ -23,9 +23,15 @@ using namespace std;
 #define DOWNVIEW_CAM 5
 int curr_state = GET_GPS_LOCK;
 
-//GPS_Waypoints
-float lat_list [] = { 40.4421768188, 40.4420509338, 40.442111969};
-float long_list [] = { -79.9453964233, -79.9453735352,-79.9455795288 };
+//GPS_Waypoints before 2/26/2017
+//float lat_list [] = { 40.4421768188, 40.4420509338, 40.442111969};
+//float long_list [] = { -79.9453964233, -79.9453735352,-79.9455795288 };
+//GPS_Waypoints after 2/26/2017, more centered on second level
+float lat_list [] = { 40.442222, 40.442072};
+float long_list [] = { -79.945563, -79.945515};
+
+
+
 int curr_ind = 0;
 
 //GPS_Stuff
@@ -131,16 +137,8 @@ void calculate_motor_speed()
 		//debug_msg.l_motor=forward_speed;
 		turn_speed = turn_speed/2;
 		forward_speed = forward_speed/2;
-		if (abs(curr_heading - head_to_dest) > 20)
-  		{
-  			left_motor = 64 - turn_speed;
-  			right_motor = 64 + turn_speed;
-		}
-		else
-		{
-			left_motor=64-forward_speed;
-			right_motor=64-forward_speed;
-		}
+		left_motor=64-forward_speed-turn_speed;
+		right_motor=64-forward_speed+turn_speed;
 		if(left_motor > 89) {
 			left_motor = 89;
 		}

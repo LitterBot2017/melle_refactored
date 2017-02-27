@@ -4,6 +4,7 @@
 #include "std_msgs/Bool.h"
 #include "std_msgs/Int32.h"
 #include "std_msgs/Int16.h"
+#include "std_msgs/String.h"
 #include "melle_obstacle_avoidance/ObAvData.h"
 #include "geometry_msgs/Twist.h"
 #include <sensor_msgs/Joy.h>
@@ -75,10 +76,12 @@ ros::Subscriber downview_cam_sub;
 //Publishers
 ros::Publisher base_pub;
 ros::Publisher debug_pub;
+ros::Publisher seal_pub;
 
 //Publisher msgs
 melle_refactored::PC_msg msg_to_send;
 melle_refactored::Debug_msg debug_msg;
+std_msgs::String seal_msg;
 
 //Motor_controller calculator and PID
 #define MAX_TURNING_SPEED 20
@@ -281,6 +284,14 @@ void melle_callback(const melle_refactored::MellE_msg msg)
 	}
 	batt_level = msg.battery;
 	bin_fullness = msg.bin_fullness;
+	if(msg.pickup_state)
+	{
+		seal_msg.data = "on";
+	}
+	else
+	{
+		seal_msg.data="off";
+	}
 }
 
 //Joystick callback to switch from twist message to left and right motor commands
@@ -362,6 +373,7 @@ int main(int argc, char **argv)
   //Publisher registration
   base_pub = n.advertise<melle_refactored::PC_msg>("PC_msg", 1000);
   debug_pub = n.advertise<melle_refactored::Debug_msg>("Debug_msg", 1000);
+  seal_pub = n.advertise<std_msgs::String>("Seal_msg", 1000);
   //Subscriber registration
   melle_sub = n.subscribe("MellE_msg",1000,melle_callback);
   joystick_sub = n.subscribe("joy",1000,joystick_callback);
@@ -386,6 +398,7 @@ int main(int argc, char **argv)
     ros::spinOnce();
     loop_rate.sleep();
     base_pub.publish(msg_to_send);
+    seal_pub.publish(seal_msg);
   }
 
   return 0;

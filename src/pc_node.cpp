@@ -79,6 +79,7 @@ ros::Subscriber joystick_sub;
 ros::Subscriber ob_av_sub;
 ros::Subscriber downview_cam_sub;
 ros::Subscriber yolo_sub;
+ros::Subscriber arm_state_sub;
 
 //Publishers
 ros::Publisher base_pub;
@@ -249,6 +250,7 @@ void downview_cam_callback(const object_tracker::BBox msg)
 		arm_to_send.x = msg.x;
 		arm_to_send.y = msg.y;
 		arm_to_send.is_centered="centered";
+		msg_to_send.relay_state=true;
 		left_motor=64;
 		right_motor=64;
 		curr_state=JOYSTICK;
@@ -365,6 +367,16 @@ void yolo_callback(const yolo2::ImageDetections detection_msg)
 	}
 }
 
+void arm_state_callback(const std_msgs::String arm_state_msg)
+{
+	if(arm_state_msg.data.compare("in_progress")==0)
+		msg_to_send.relay_state=true;
+	else if(arm_state_msg.data.compare("pickup_done")==0)
+		msg_to_send.relay_state=false;
+	else
+		msg_to_send.relay_state=false;
+}
+
 //Ob_av_callback to change from ob_av_msg to motor commands
 void ob_av_callback(const melle_obstacle_avoidance::ObAvData ob_av_msg)
 {
@@ -408,7 +420,8 @@ int main(int argc, char **argv)
   joystick_sub = n.subscribe("joy",1000,joystick_callback);
   ob_av_sub =n.subscribe("ob_av_data",1000,ob_av_callback);
   downview_cam_sub =n.subscribe("down_cam_msg",1000,downview_cam_callback);
-  downview_cam_sub =n.subscribe("vision/yolo2/detections",1000,yolo_callback);
+  yolo_sub =n.subscribe("vision/yolo2/detections",1000,yolo_callback);
+  arm_state_sub = n.subscribe("Melle_Arm_State",1000,arm_state_callback);
   ros::Rate loop_rate(10);
 
   while(ros::ok())

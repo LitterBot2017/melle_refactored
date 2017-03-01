@@ -16,6 +16,7 @@ add_message_files(
   MellE_msg.msg
   PC_msg.msg
   Debug_msg.msg
+  Arm_msg.msg
 )
 
 generate_messages(
@@ -36,4 +37,5 @@ include_directories(
 add_executable(melle_refactored src/pc_node.cpp src/PID.cpp src/PID_horz.cpp)
 add_dependencies(melle_refactored ${catkin_EXPORTED_TARGETS})
 add_dependencies(melle_refactored melle_obstacle_avoidance_generate_messages_cpp)
+add_dependencies(melle_refactored yolo2_generate_messages_cpp)
 target_link_libraries(melle_refactored ${catkin_LIBRARIES} )

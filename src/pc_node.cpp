@@ -11,7 +11,10 @@
 #include "melle_refactored/MellE_msg.h"
 #include "melle_refactored/PC_msg.h"
 #include "melle_refactored/Debug_msg.h"
-#include "downview_cam/po.h"
+#include "melle_refactored/Arm_msg.h"
+#include "object_tracker/BBox.h"
+#include "yolo2/ImageDetections.h"
+#include "yolo2/Detection.h"
 #include "PID.h"
 #include "PID_horz.h"
 using namespace std;
@@ -67,21 +70,25 @@ string downview_state;
 //Debug mode
 bool enable_debug_mode=false;
 
+//Detectors
+bool detected=false;
+
 //Subscribers
 ros::Subscriber melle_sub; 
 ros::Subscriber joystick_sub;
 ros::Subscriber ob_av_sub;
 ros::Subscriber downview_cam_sub;
+ros::Subscriber yolo_sub;
 
 //Publishers
 ros::Publisher base_pub;
 ros::Publisher debug_pub;
-ros::Publisher seal_pub;
+ros::Publisher arm_pub;
 
 //Publisher msgs
 melle_refactored::PC_msg msg_to_send;
 melle_refactored::Debug_msg debug_msg;
-std_msgs::String seal_msg;
+melle_refactored::Arm_msg arm_to_send;
 
 //Motor_controller calculator and PID
 #define MAX_TURNING_SPEED 20
@@ -231,26 +238,33 @@ void motor_turn(float x_pos, float y_pos, float* motor_l, float* motor_r )
 }
 
 //Downview Camera Callback
-void downview_cam_callback(const downview_cam::po msg)
+void downview_cam_callback(const object_tracker::BBox msg)
 {
 	if(curr_state!=DOWNVIEW_CAM)
 		return;
-	downview_state=msg.command;
-	if(msg.command.compare("not_detected")==0)
+
+	melle_refactored::Arm_msg arm_to_send;
+	if(detected&&(msg.x<340&&msg.x>300)&&(msg.y<260&&msg.y>220))
 	{
-		left_motor = 64;
-	    right_motor = 64;
-	}
-	else if(msg.command.compare("detected")==0)
-	{
-		motor_turn(msg.x,msg.y,&left_motor,&right_motor);
-	}
-	else if(msg.command.compare("centered")==0)
-	{
+		arm_to_send.x = msg.x;
+		arm_to_send.y = msg.y;
+		arm_to_send.is_centered="centered";
 		left_motor=64;
 		right_motor=64;
 		curr_state=JOYSTICK;
 	}
+	else if(detected)
+	{
+		arm_to_send.x = msg.x;
+		arm_to_send.y = msg.y;
+		arm_to_send.is_centered="detected";
+		motor_turn(msg.x,msg.y,&left_motor,&right_motor);
+	}
+	else if(!detected)
+	{
+		arm_to_send.is_centered="not_detected";
+	}
+	arm_pub.publish(arm_to_send);
 }
 
 //MellE Callback
@@ -286,11 +300,11 @@ void melle_callback(const melle_refactored::MellE_msg msg)
 	bin_fullness = msg.bin_fullness;
 	if(msg.pickup_state)
 	{
-		seal_msg.data = "on";
+		arm_to_send.pickup_state = "on";
 	}
 	else
 	{
-		seal_msg.data="off";
+		arm_to_send.pickup_state="off";
 	}
 }
 
@@ -336,6 +350,21 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 	right_motor =(64 + forward_speed + turn_speed);
 }
 
+//yolo_callback for detections
+void yolo_callback(const yolo2::ImageDetections detection_msg)
+{
+	try
+	{
+		int test_class_id=detection_msg.detections[0].class_id;
+		if(test_class_id==0||test_class_id==1||test_class_id==2)
+			detected=true;
+	}
+	catch(const std::exception&)
+	{
+		detected=false;
+	}
+}
+
 //Ob_av_callback to change from ob_av_msg to motor commands
 void ob_av_callback(const melle_obstacle_avoidance::ObAvData ob_av_msg)
 {
@@ -373,12 +402,13 @@ int main(int argc, char **argv)
   //Publisher registration
   base_pub = n.advertise<melle_refactored::PC_msg>("PC_msg", 1000);
   debug_pub = n.advertise<melle_refactored::Debug_msg>("Debug_msg", 1000);
-  seal_pub = n.advertise<std_msgs::String>("Seal_msg", 1000);
+  arm_pub = n.advertise<melle_refactored::Arm_msg>("Arm_msg", 1000);
   //Subscriber registration
   melle_sub = n.subscribe("MellE_msg",1000,melle_callback);
   joystick_sub = n.subscribe("joy",1000,joystick_callback);
   ob_av_sub =n.subscribe("ob_av_data",1000,ob_av_callback);
   downview_cam_sub =n.subscribe("down_cam_msg",1000,downview_cam_callback);
+  downview_cam_sub =n.subscribe("vision/yolo2/detections",1000,yolo_callback);
   ros::Rate loop_rate(10);
 
   while(ros::ok())
@@ -398,7 +428,6 @@ int main(int argc, char **argv)
     ros::spinOnce();
     loop_rate.sleep();
     base_pub.publish(msg_to_send);
-    seal_pub.publish(seal_msg);
   }
 
   return 0;

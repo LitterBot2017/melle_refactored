@@ -24,7 +24,7 @@ using namespace std;
 #define MOVE_TO_WAYPOINT 2
 #define OBSTACLE_AVOIDANCE 3
 #define JOYSTICK 4
-#define DOWNVIEW_CAM 5
+#define OBJECT_TRACK 5
 int curr_state = GET_GPS_LOCK;
 
 //GPS_Waypoints before 2/26/2017
@@ -77,7 +77,7 @@ bool detected=false;
 ros::Subscriber melle_sub; 
 ros::Subscriber joystick_sub;
 ros::Subscriber ob_av_sub;
-ros::Subscriber downview_cam_sub;
+ros::Subscriber object_track_sub;
 ros::Subscriber yolo_sub;
 ros::Subscriber arm_state_sub;
 
@@ -238,29 +238,29 @@ void motor_turn(float x_pos, float y_pos, float* motor_l, float* motor_r )
 	}	
 }
 
-//Downview Camera Callback
-void downview_cam_callback(const object_tracker::BBox msg)
+//Object Track Callback
+void object_track_callback(const object_tracker::BBox msg)
 {
-	if(curr_state!=DOWNVIEW_CAM)
+	if(curr_state != OBJECT_TRACK)
 		return;
 
 	melle_refactored::Arm_msg arm_to_send;
-	if(detected&&(msg.x<340&&msg.x>300)&&(msg.y<260&&msg.y>220))
+	if(detected && (msg.x < 340 && msg.x > 300) && (msg.y < 260 && msg.y > 220))
 	{
 		arm_to_send.x = msg.x;
 		arm_to_send.y = msg.y;
-		arm_to_send.is_centered="centered";
-		msg_to_send.relay_state=true;
-		left_motor=64;
-		right_motor=64;
-		curr_state=JOYSTICK;
+		arm_to_send.is_centered = "centered";
+		msg_to_send.relay_state = true;
+		left_motor = 64;
+		right_motor = 64;
+		curr_state = JOYSTICK;
 	}
 	else if(detected)
 	{
 		arm_to_send.x = msg.x;
 		arm_to_send.y = msg.y;
-		arm_to_send.is_centered="detected";
-		motor_turn(msg.x,msg.y,&left_motor,&right_motor);
+		arm_to_send.is_centered = "detected";
+		motor_turn(msg.x,msg.y, &left_motor, &right_motor);
 	}
 	else if(!detected)
 	{
@@ -320,7 +320,7 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 	else if(joy->buttons[2])
 		curr_state = JOYSTICK;
 	else if(joy->buttons[3])
-		curr_state=DOWNVIEW_CAM;
+		curr_state=OBJECT_TRACK;
 	else if(joy->buttons[9])
 	{
 		if(enable_debug_mode)
@@ -418,8 +418,8 @@ int main(int argc, char **argv)
   //Subscriber registration
   melle_sub = n.subscribe("MellE_msg",1000,melle_callback);
   joystick_sub = n.subscribe("joy",1000,joystick_callback);
-  ob_av_sub =n.subscribe("ob_av_data",1000,ob_av_callback);
-  downview_cam_sub =n.subscribe("down_cam_msg",1000,downview_cam_callback);
+  ob_av_sub = n.subscribe("ob_av_data",1000,ob_av_callback);
+  object_track_sub = n.subscribe("bbox", 1000, object_track_callback);
   yolo_sub =n.subscribe("vision/yolo2/detections",1000,yolo_callback);
   arm_state_sub = n.subscribe("Melle_Arm_State",1000,arm_state_callback);
   ros::Rate loop_rate(10);

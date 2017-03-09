@@ -4,7 +4,7 @@
   <include file="$(find melle_obstacle_avoidance)/launch/melle_ob_av.launch"/>
   <include file="$(find yolo2)/launch/yolo2.launch"/>
   <include file="$(find object_tracker)/launch/object_tracker.launch"/>
-  <node name="pc_node" pkg="melle_refactored" type="melle_refactored">
+  <node name="navigation" pkg="navigation" type="navgiation">
   </node>
 
   <node respawn="true" pkg="joy"

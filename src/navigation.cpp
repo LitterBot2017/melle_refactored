@@ -6,10 +6,11 @@
 #include "navigation/Debug.h"
 #include "navigation/Arm.h"
 
-#include "object_tracker/BBox.h"
+#include "object_tracker/Position.h"
 #include "obstacle_avoidance/DesiredHeading.h"
 #include "yolo2/ImageDetections.h"
 #include "yolo2/Detection.h"
+#include "std_msgs/Int8.h"
 #include "std_msgs/String.h"
 
 #include <sensor_msgs/Joy.h>
@@ -20,11 +21,29 @@
 
 using namespace std;
 
-//States
+// States
 #define GET_GPS_LOCK 1
 #define MOVE_TO_WAYPOINT 2
 #define JOYSTICK 3
-#define OBJECT_TRACK 4
+#define FORWARD_SERVO 4
+#define MOVE_TO_DOWNWARD 5
+#define DOWNWARD_SERVO 6
+#define CLASSIFICATION 7
+#define ARM_PICKUP 8
+
+// Camera Indices
+#define DOWNWARD_CAMERA 0
+#define FORWARD_CAMERA 1
+
+// Image sizes
+#define DOWNWARD_WIDTH 1280
+#define DOWNWARD_HEIGHT 470
+#define FORWARD_WIDTH 1280
+#define FORWARD_HEIGHT 720
+#define SERVO_TOLERANCE 50
+
+// Litter Classification Confidence Threshold
+#define MIN_CONFIDENCE 0.80
 
 int curr_state = GET_GPS_LOCK;
 
@@ -61,11 +80,9 @@ string downview_state;
 //Debug mode
 bool enable_debug_mode = false;
 
-//Detectors
-bool detected = false;
-
 //Subscribers
 ros::Subscriber arduino_sub;
+ros::Subscriber arm_state_sub;
 ros::Subscriber joystick_sub;
 ros::Subscriber obav_desired_heading_sub;
 ros::Subscriber object_track_sub;
@@ -74,6 +91,7 @@ ros::Subscriber yolo_sub;
 //Publishers
 ros::Publisher navigation_pub;
 ros::Publisher debug_pub;
+ros::Publisher camera_select_pub;
 ros::Publisher arm_pub;
 
 //Publisher msgs
@@ -90,29 +108,38 @@ float left_motor = 64;
 float right_motor = 64;
 
 //Debug message creator
-void publish_debug_msg(float c_lat,float c_long, int run_time,int satellites,float gps_odom,float direction,
-						int bin_diag, int batt_level_read, float l_motor, float r_motor, float d_lat, float d_long,
-						int way_id, float bearing, float dist_away, float head_error, int current_state, string downview_state, float obs_modifier)
-{
-	debug_msg.curr_lat = c_lat;
-	debug_msg.curr_long = c_long;
-	debug_msg.elapsed_time = run_time;
-	debug_msg.sats = satellites;
-	debug_msg.speed_val = gps_odom;
-	debug_msg.heading = direction;
-	debug_msg.bin_fullness = bin_diag;
-	debug_msg.battery = batt_level_read;
-	debug_msg.l_motor = l_motor;
-	debug_msg.r_motor = r_motor;
-	debug_msg.dest_lat = d_lat;
-	debug_msg.dest_long = d_long;
-	debug_msg.waypoint_id = way_id;
-	debug_msg.head_to_dest = bearing;
-	debug_msg.dist_to_dest = dist_away;
-	debug_msg.head_error = head_error;
-	debug_msg.current_state = current_state;
-	debug_msg.downview_state = downview_state;
-	debug_msg.obs_modifier = obs_modifier;
+void publish_debug_message() {
+
+    if(enable_debug_mode) {
+
+		debug_msg.curr_lat = curr_lat;
+		debug_msg.curr_long = curr_long;
+		debug_msg.elapsed_time = elapsedTime;
+		debug_msg.sats = sats;
+		debug_msg.speed_val = speed;
+		debug_msg.heading = curr_heading;
+		debug_msg.bin_fullness = bin_fullness;
+		debug_msg.battery = batt_level;
+		debug_msg.l_motor = left_motor;
+		debug_msg.r_motor = right_motor;
+		debug_msg.dest_lat = dest_lat;
+		debug_msg.dest_long = dest_long;
+		debug_msg.waypoint_id = curr_ind;
+		debug_msg.head_to_dest = head_to_dest;
+		debug_msg.dist_to_dest = dis_to_dest;
+		debug_msg.head_error = curr_heading-head_to_dest;
+		debug_msg.current_state = curr_state;
+		debug_msg.downview_state = downview_state;
+		debug_msg.obs_modifier = obs_magnitude_modifier;
+
+		debug_pub.publish(debug_msg);
+	}
+}
+
+void select_camera(int camera) {
+  	std_msgs::Int8 msg;
+  	msg.data = camera;
+    camera_select_pub.publish(msg);
 }
 
 void calculate_motor_speed()
@@ -152,57 +179,65 @@ void calculate_motor_speed()
 	}
 }
 
-void motor_turn(float x_pos, float y_pos, float* motor_l, float* motor_r) {
+bool turn_to_center(float x_pos, float y_pos,
+	float width, float height, float tolerance,
+	float* motor_l, float* motor_r) {
 
-	if(x_pos - 640 > 50) {
+	if(x_pos - (width/2) > (tolerance/2)) {
 		left_motor =  64 + 4;
   		right_motor = 64 - 4;
-	}
-	else if(x_pos - 640 < 50) {
+	} else if(x_pos - (width/2) < (-1*tolerance/2)) {
 		left_motor =  64 - 4;
   		right_motor = 64 + 4;
+	} else if(y_pos - (height/2) > (tolerance/2)) {
+		left_motor =  64 - 3;
+		right_motor = 64 - 3;
+	} else if(y_pos - (height/2) < (-1 * tolerance/2)) {
+		left_motor =  64 + 3;
+		right_motor = 64 + 3;
+	} else {
+		left_motor = 64;
+		right_motor = 64;
+		return true;
 	}
-	if(x_pos < 690 && x_pos > 590) {
-		if(y_pos - 250 > 50) {
-			left_motor =  64 - 3;
-  			right_motor = 64 - 3;
-		}
-		else if(y_pos - 250 < 50) {
-			left_motor =  64 + 3;
-  			right_motor = 64 + 3;
-		}
-	}	
+	return false;
 }
 
 //Object Track Callback
-void object_track_callback(const object_tracker::BBox msg)
-{
-	if(curr_state != OBJECT_TRACK)
+void object_track_callback(const object_tracker::Position msg) {
+
+	if (curr_state != FORWARD_SERVO && curr_state != DOWNWARD_SERVO && curr_state != ARM_PICKUP)
 		return;
 
-	navigation::Arm arm_msg;
-	if(detected && (msg.x < 340 && msg.x > 300) && (msg.y < 260 && msg.y > 220))
-	{
+	if (curr_state == FORWARD_SERVO) {
+		bool servo_completed = turn_to_center(msg.x, msg.y,
+			FORWARD_WIDTH, FORWARD_HEIGHT, SERVO_TOLERANCE, &left_motor, &right_motor);
+		if (servo_completed) {
+			curr_state = MOVE_TO_DOWNWARD;
+			select_camera(DOWNWARD_CAMERA);
+			left_motor =  64 + 3;
+			right_motor = 64 + 3;
+		}
+	}
+
+	if (curr_state == DOWNWARD_SERVO) {
+		bool servo_completed = turn_to_center(msg.x, msg.y,
+			DOWNWARD_WIDTH, DOWNWARD_HEIGHT, SERVO_TOLERANCE, &left_motor, &right_motor);
+		if (servo_completed) {
+			curr_state = ARM_PICKUP;
+		}
+	}
+
+	if (curr_state == ARM_PICKUP) {
+		navigation::Arm arm_msg;
 		arm_msg.x = msg.x;
 		arm_msg.y = msg.y;
 		arm_msg.is_centered = "centered";
 		navigation_msg.relay_state = true;
 		left_motor = 64;
 		right_motor = 64;
-		curr_state = JOYSTICK;
+		arm_pub.publish(arm_msg);
 	}
-	else if(detected)
-	{
-		arm_msg.x = msg.x;
-		arm_msg.y = msg.y;
-		arm_msg.is_centered = "detected";
-		motor_turn(msg.x, msg.y, &left_motor, &right_motor);
-	}
-	else if(!detected)
-	{
-		arm_msg.is_centered = "not_detected";
-	}
-	arm_pub.publish(arm_msg);
 }
 
 // Arduino Callback
@@ -227,6 +262,7 @@ void arduino_callback(const arduino_pc::Arduino arduino_msg)
 	}
 	if (sats == 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT)) {
 		curr_state = MOVE_TO_WAYPOINT;
+		select_camera(FORWARD_CAMERA);
 		navigation_msg.waypoint_id = 30;		
 	}
 	calculate_motor_speed();
@@ -241,7 +277,7 @@ void arduino_callback(const arduino_pc::Arduino arduino_msg)
 	if(arduino_msg.pickup_state) {
 		arm_msg.pickup_state = "on";
 	} else {
-		arm_msg.pickup_state="off";
+		arm_msg.pickup_state = "off";
 	}
 }
 
@@ -287,12 +323,27 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 }
 
 //yolo_callback for detections
-void yolo_callback(const yolo2::ImageDetections detection_msg)
-{
+void yolo_callback(const yolo2::ImageDetections detection_msg) {
 	if (detection_msg.num_detections > 0) {
-		detected = true;
-	} else {
-		detected = false;
+		if (curr_state == MOVE_TO_WAYPOINT) {
+			curr_state = FORWARD_SERVO;
+		} else if (curr_state == MOVE_TO_DOWNWARD) {
+			curr_state = DOWNWARD_SERVO;
+		} else if (curr_state == CLASSIFICATION) {
+			bool isLitter = false;
+			int classID;
+			float confidence;
+			for (int i = 0; i < detection_msg.num_detections; i++) {
+				classID = detection_msg.detections[i].class_id;
+				confidence = detection_msg.detections[i].confidence;
+				if ((classID == 0 || classID == 1) && confidence > MIN_CONFIDENCE)
+					curr_state = ARM_PICKUP;
+			}
+			if (curr_state != ARM_PICKUP) {
+				curr_state = MOVE_TO_WAYPOINT;
+				select_camera(FORWARD_CAMERA);
+			}
+		}
 	}
 }
 
@@ -304,6 +355,29 @@ void obav_desired_heading_callback(const obstacle_avoidance::DesiredHeading desi
 
 }
 
+void publish_navigation_message() {
+	navigation_msg.l_motor_val = left_motor;
+    navigation_msg.r_motor_val = right_motor;
+    navigation_msg.dest_lat = head_to_dest;
+    navigation_msg.dest_long = dis_to_dest;
+    navigation_msg.waypoint_id = curr_state;
+
+    navigation_pub.publish(navigation_msg);
+}
+
+void arm_state_callback(const std_msgs::String arm_state_msg) {
+	if (curr_state != ARM_PICKUP)
+		return;
+
+	if(arm_state_msg.data.compare("in_progress") == 0) {
+		navigation_msg.relay_state = true;
+	} else {
+		navigation_msg.relay_state = false;
+		curr_state = MOVE_TO_WAYPOINT;
+		select_camera(FORWARD_CAMERA);
+	}
+}
+
 int main(int argc, char **argv) {
 
   ros::init(argc, argv, "navigation");
@@ -312,32 +386,22 @@ int main(int argc, char **argv) {
   //Publisher registration
   navigation_pub = n.advertise<navigation::Navigation>("navigation", 1000);
   debug_pub = n.advertise<navigation::Debug>("debug", 1000);
+  camera_select_pub = n.advertise<std_msgs::Int8>("vision/yolo2/camera_select", 1000);
   arm_pub = n.advertise<navigation::Arm>("arm", 1000);
 
   //Subscriber registration
   arduino_sub = n.subscribe("arduino", 1000, arduino_callback);
+  arm_state_sub = n.subscribe("arm_state", 1000, arm_state_callback);
   joystick_sub = n.subscribe("joy", 1000, joystick_callback);
   obav_desired_heading_sub = n.subscribe("desired_heading", 1000, obav_desired_heading_callback);
-  object_track_sub = n.subscribe("bbox", 1000, object_track_callback);
-  yolo_sub = n.subscribe("vision/yolo2/detections",1000,yolo_callback);
+  object_track_sub = n.subscribe("object_track", 1000, object_track_callback);
+  yolo_sub = n.subscribe("vision/yolo2/detections", 1000, yolo_callback);
+
   ros::Rate loop_rate(10);
 
-  while(ros::ok())
-  {
-  	navigation_msg.l_motor_val = left_motor;
-    navigation_msg.r_motor_val = right_motor;
-    navigation_msg.dest_lat = head_to_dest;
-    navigation_msg.dest_long = dis_to_dest;
-    navigation_msg.waypoint_id = curr_state;
-    if(enable_debug_mode)
-    {
-    	publish_debug_msg(curr_lat,curr_long, elapsedTime,sats,speed,curr_heading,
-						bin_fullness,batt_level, left_motor, right_motor, dest_lat, dest_long,
-						curr_ind, head_to_dest, dis_to_dest, curr_heading-head_to_dest, curr_state, downview_state,obs_magnitude_modifier);
-    	debug_pub.publish(debug_msg);
-    }
-
-    navigation_pub.publish(navigation_msg);
+  while(ros::ok()) {
+  	publish_navigation_message();
+  	publish_debug_message();
 
     ros::spinOnce();
     loop_rate.sleep();

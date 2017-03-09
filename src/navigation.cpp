@@ -6,8 +6,8 @@
 #include "navigation/Debug.h"
 #include "navigation/Arm.h"
 
-#include "object_tracker/Position.h"
-#include "obstacle_avoidance/DesiredHeading.h"
+#include "object_tracker/BBox.h"
+#include "obstacle_avoidance/ObstacleHeading.h"
 #include "yolo2/ImageDetections.h"
 #include "yolo2/Detection.h"
 #include "std_msgs/Int8.h"
@@ -84,7 +84,7 @@ bool enable_debug_mode = false;
 ros::Subscriber arduino_sub;
 ros::Subscriber arm_state_sub;
 ros::Subscriber joystick_sub;
-ros::Subscriber obav_desired_heading_sub;
+ros::Subscriber obstacle_heading_sub;
 ros::Subscriber object_track_sub;
 ros::Subscriber yolo_sub;
 
@@ -204,7 +204,7 @@ bool turn_to_center(float x_pos, float y_pos,
 }
 
 //Object Track Callback
-void object_track_callback(const object_tracker::Position msg) {
+void object_track_callback(const object_tracker::BBox msg) {
 
 	if (curr_state != FORWARD_SERVO && curr_state != DOWNWARD_SERVO && curr_state != ARM_PICKUP)
 		return;
@@ -348,10 +348,10 @@ void yolo_callback(const yolo2::ImageDetections detection_msg) {
 }
 
 // Desired heading to change from desired heading to motor commands
-void obav_desired_heading_callback(const obstacle_avoidance::DesiredHeading desired_heading_msg) {
+void obstacle_heading_callback(const obstacle_avoidance::ObstacleHeading obstacle_heading_msg) {
 
-	obs_direction = desired_heading_msg.direction;
-	obs_magnitude = desired_heading_msg.magnitude;
+	obs_direction = obstacle_heading_msg.direction;
+	obs_magnitude = obstacle_heading_msg.magnitude;
 
 }
 
@@ -393,7 +393,7 @@ int main(int argc, char **argv) {
   arduino_sub = n.subscribe("arduino", 1000, arduino_callback);
   arm_state_sub = n.subscribe("arm_state", 1000, arm_state_callback);
   joystick_sub = n.subscribe("joy", 1000, joystick_callback);
-  obav_desired_heading_sub = n.subscribe("desired_heading", 1000, obav_desired_heading_callback);
+  obstacle_heading_sub = n.subscribe("obstacle_heading", 1000, obstacle_heading_callback);
   object_track_sub = n.subscribe("object_track", 1000, object_track_callback);
   yolo_sub = n.subscribe("vision/yolo2/detections", 1000, yolo_callback);
 

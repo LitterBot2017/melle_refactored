@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <launch>
 
-  <include file="$(find melle_obstacle_avoidance)/launch/melle_ob_av.launch"/>
+  <include file="$(find obstacle_avoidance)/launch/obstacle_avoidance.launch"/>
   <include file="$(find yolo2)/launch/yolo2.launch"/>
   <include file="$(find object_tracker)/launch/object_tracker.launch"/>
-  <node name="navigation" pkg="navigation" type="navgiation">
+  <node name="navigation" pkg="navigation" type="navigation">
+  </node>
+  <node name="arduino_pc" pkg="arduino_pc" type="arduino_pc">
   </node>
 
   <node respawn="true" pkg="joy"
         type="joy_node" name="joy_node" >
-    <param name="dev" type="string" value="/dev/input/js0" />
+    <param name="dev" type="string" value="/dev/input/js1" />
     <param name="deadzone" value="0.2" />
   </node>
   

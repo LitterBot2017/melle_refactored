@@ -16,8 +16,9 @@
 #include <sensor_msgs/Joy.h>
 
 #include "GPS.h"
-#include "PID.h"
-#include "PID_horz.h"
+#include "Motor.h"
+#include "Visual_Servo.h"
+
 
 using namespace std;
 
@@ -99,11 +100,7 @@ navigation::Navigation navigation_msg;
 navigation::Debug debug_msg;
 navigation::Arm arm_msg;
 
-//Motor_controller calculator and PID
-#define MAX_TURNING_SPEED 20
-#define MAX_FORWARD_SPEED 50
-PID turn_pid = PID(0, 10, 0.01, 0, 0, MAX_TURNING_SPEED, -1 * MAX_TURNING_SPEED);
-PID_horz forward_pid = PID_horz(0, 10, 0.01, 0, 0, MAX_FORWARD_SPEED, -1 * MAX_FORWARD_SPEED);
+//Motor initial state
 float left_motor = 64;
 float right_motor = 64;
 
@@ -144,63 +141,17 @@ void select_camera(int camera) {
 
 void calculate_motor_speed()
 {
-	
-	if(curr_state != GET_GPS_LOCK && curr_state != MOVE_TO_WAYPOINT) {
-		navigation_msg.waypoint_id = 40;
-		return;
-	}
-
-	else if(curr_state == GET_GPS_LOCK) {
-		navigation_msg.waypoint_id = 50;
-		left_motor = 64;
-		right_motor = 64;
-		return;
-	}
-
-	else if(curr_state == MOVE_TO_WAYPOINT) {
-
-		float turn_speed = turn_pid.getNewValue(curr_heading, head_to_dest, elapsedTime);
-		float forward_speed = forward_pid.getNewValue(dis_to_dest, elapsedTime);
-		//debug_msg.r_motor=turn_speed;
-		//debug_msg.l_motor=forward_speed;
-		turn_speed = turn_speed/2;
-		forward_speed = forward_speed/2;
-		left_motor = 64 - forward_speed - turn_speed;
-		right_motor = 64 - forward_speed + turn_speed;
-
-		// Clip motor speeds to be between 39 and 89
-		left_motor = std::max(float(39.0), std::min(float(left_motor), float(89.0)));
-		right_motor = std::max(float(39.0), std::min(float(right_motor), float(89.0)));
-
-		if (dis_to_dest < 3) {
-			right_motor = 64;
+	switch(curr_state) {
+		case GET_GPS_LOCK:
 			left_motor = 64;
-		}
+			right_motor = 64;
+			break;
+		case MOVE_TO_WAYPOINT:
+			Motor::motor_speed_navigation(dis_to_dest,curr_heading,head_to_dest,&left_motor,&right_motor,elapsedTime);
+			break;	
+		default:
+			break;
 	}
-}
-
-bool turn_to_center(float x_pos, float y_pos,
-	float width, float height, float tolerance,
-	float* motor_l, float* motor_r) {
-
-	if(x_pos - (width/2) > (tolerance/2)) {
-		left_motor =  64 + 4;
-  		right_motor = 64 - 4;
-	} else if(x_pos - (width/2) < (-1*tolerance/2)) {
-		left_motor =  64 - 4;
-  		right_motor = 64 + 4;
-	} else if(y_pos - (height/2) > (tolerance/2)) {
-		left_motor =  64 - 3;
-		right_motor = 64 - 3;
-	} else if(y_pos - (height/2) < (-1 * tolerance/2)) {
-		left_motor =  64 + 3;
-		right_motor = 64 + 3;
-	} else {
-		left_motor = 64;
-		right_motor = 64;
-		return true;
-	}
-	return false;
 }
 
 //Object Track Callback
@@ -210,8 +161,11 @@ void object_track_callback(const object_tracker::BBox msg) {
 		return;
 
 	if (curr_state == FORWARD_SERVO) {
-		bool servo_completed = turn_to_center(msg.x, msg.y,
-			FORWARD_WIDTH, FORWARD_HEIGHT, SERVO_TOLERANCE, &left_motor, &right_motor);
+		float visual_servo_dist = Visual_Servo::calculate_distance(msg.x,msg.y,640,700);
+		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,640,700,curr_heading);
+		bool servo_completed = Motor::motor_speed_visual_servo(visual_servo_dist, 
+									 						   curr_heading, visual_servo_angle, 
+									 						   &left_motor,&right_motor,elapsedTime);
 		if (servo_completed) {
 			curr_state = MOVE_TO_DOWNWARD;
 			select_camera(DOWNWARD_CAMERA);
@@ -221,8 +175,11 @@ void object_track_callback(const object_tracker::BBox msg) {
 	}
 
 	if (curr_state == DOWNWARD_SERVO) {
-		bool servo_completed = turn_to_center(msg.x, msg.y,
-			DOWNWARD_WIDTH, DOWNWARD_HEIGHT, SERVO_TOLERANCE, &left_motor, &right_motor);
+		float visual_servo_dist = Visual_Servo::calculate_distance(msg.x,msg.y,640,300);
+		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,640,300,curr_heading);
+		bool servo_completed = Motor::motor_speed_visual_servo(visual_servo_dist, 
+									 						   curr_heading, visual_servo_angle, 
+									 						   &left_motor,&right_motor,elapsedTime);
 		if (servo_completed) {
 			curr_state = ARM_PICKUP;
 		}
@@ -286,22 +243,12 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 {
 	if(joy->buttons[0]) {
 		curr_state = GET_GPS_LOCK;
-	} else if(joy->buttons[1]){
-		// curr_state = OBSTACLE_AVOIDANCE;
 	} else if(joy->buttons[2]) {
 		curr_state = JOYSTICK;
-	} else if(joy->buttons[3]) {
-		// curr_state=OBJECT_TRACK;
 	} else if(joy->buttons[9]) {
-		if(enable_debug_mode)
-		{
-			enable_debug_mode=false;
-		}
-		else
-		{
-			enable_debug_mode=true;
-		}
+		enable_debug_mode = !enable_debug_mode;
 	}
+
 	else if(joy->buttons[15])
 		obs_magnitude_modifier+=2.5;
 	else if(joy->buttons[16])
@@ -311,6 +258,7 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 	{
 		return;
 	}
+
     if(curr_state == JOYSTICK && joy->buttons[7])
     	max_speed_teleop ++;
     if(curr_state == JOYSTICK && joy->buttons[6])

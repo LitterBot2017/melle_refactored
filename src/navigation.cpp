@@ -215,12 +215,10 @@ void arduino_callback(const arduino_pc::Arduino arduino_msg)
 	
 	if (sats != 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT)) {
 		curr_state = GET_GPS_LOCK;
-		navigation_msg.waypoint_id = 20;
 	}
 	if (sats == 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT)) {
 		curr_state = MOVE_TO_WAYPOINT;
-		select_camera(FORWARD_CAMERA);
-		navigation_msg.waypoint_id = 30;		
+		select_camera(FORWARD_CAMERA);		
 	}
 	calculate_motor_speed();
 	if(dis_to_dest < 3) {
@@ -264,10 +262,7 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
     if(curr_state == JOYSTICK && joy->buttons[6])
     	max_speed_teleop --;
 
-	float turn_speed = joy->axes[2]*8;
-	float forward_speed = joy->axes[1]*max_speed_teleop;
-	left_motor = (64 + forward_speed - turn_speed);
-	right_motor = (64 + forward_speed + turn_speed);
+	Motor::motor_speed_joystick(joy->axes[2],joy->axes[1],max_speed_teleop,&left_motor,&right_motor);	
 }
 
 //yolo_callback for detections
@@ -296,11 +291,10 @@ void yolo_callback(const yolo2::ImageDetections detection_msg) {
 }
 
 // Desired heading to change from desired heading to motor commands
-void obstacle_heading_callback(const obstacle_avoidance::ObstacleHeading obstacle_heading_msg) {
-
+void obstacle_heading_callback(const obstacle_avoidance::ObstacleHeading obstacle_heading_msg) 
+{
 	obs_direction = obstacle_heading_msg.direction;
 	obs_magnitude = obstacle_heading_msg.magnitude;
-
 }
 
 void publish_navigation_message() {

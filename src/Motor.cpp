@@ -59,3 +59,11 @@ bool Motor::motor_speed_visual_servo(float dist, float curr_angle, float dest_an
 	return false;
 
 }
+
+void Motor::motor_speed_joystick(float angular_input, float linear_input, int max_speed_teleop,float* left_motor, float* right_motor )
+{
+	float turn_speed = angular_input*8;
+	float forward_speed = linear_input*max_speed_teleop;
+	*left_motor = (64 + forward_speed - turn_speed);
+	*right_motor = (64 + forward_speed + turn_speed);
+}

@@ -17,6 +17,6 @@ float Visual_Servo::calculate_angle(float x, float y, float x_center, float y_ce
 {
 	float xdiff = x-x_center;
 	float ydiff = y-y_center;
-	float angle = atan2(-ydiff,xdiff);
+	float angle = atan2(ydiff,xdiff);
 	return init_angle+angle;
 }

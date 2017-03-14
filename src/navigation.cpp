@@ -8,8 +8,6 @@
 
 #include "object_tracker/BBox.h"
 #include "obstacle_avoidance/ObstacleHeading.h"
-#include "yolo2/ImageDetections.h"
-#include "yolo2/Detection.h"
 #include "std_msgs/Int8.h"
 #include "std_msgs/String.h"
 
@@ -26,10 +24,7 @@ using namespace std;
 #define GET_GPS_LOCK 1
 #define MOVE_TO_WAYPOINT 2
 #define JOYSTICK 3
-#define FORWARD_SERVO 4
-#define MOVE_TO_DOWNWARD 5
-#define DOWNWARD_SERVO 6
-#define CLASSIFICATION 7
+#define LITTER_PICKUP 4
 #define ARM_PICKUP 8
 
 // Camera Indices
@@ -87,12 +82,10 @@ ros::Subscriber arm_state_sub;
 ros::Subscriber joystick_sub;
 ros::Subscriber obstacle_heading_sub;
 ros::Subscriber object_track_sub;
-ros::Subscriber yolo_sub;
 
 //Publishers
 ros::Publisher navigation_pub;
 ros::Publisher debug_pub;
-ros::Publisher camera_select_pub;
 ros::Publisher arm_pub;
 
 //Publisher msgs
@@ -133,58 +126,48 @@ void publish_debug_message() {
 	}
 }
 
-void select_camera(int camera) {
-  	std_msgs::Int8 msg;
-  	msg.data = camera;
-    camera_select_pub.publish(msg);
-}
-
-void calculate_motor_speed()
-{
-	switch(curr_state) {
-		case GET_GPS_LOCK:
-			left_motor = 64;
-			right_motor = 64;
-			break;
-		case MOVE_TO_WAYPOINT:
-			Motor::motor_speed_navigation(dis_to_dest,curr_heading,head_to_dest,&left_motor,&right_motor,elapsedTime);
-			break;	
-		default:
-			break;
-	}
-}
-
 //Object Track Callback
 void object_track_callback(const object_tracker::BBox msg) {
 
-	if (curr_state != FORWARD_SERVO && curr_state != DOWNWARD_SERVO && curr_state != ARM_PICKUP)
+	bool detection = msg.detection;
+	bool isDownServo = msg.down_servo;
+	if (curr_state != LITTER_PICKUP && detection && curr_state != JOYSTICK)
+		curr_state = LITTER_PICKUP;
+	if (curr_state == JOYSTICK)
 		return;
-
-	if (curr_state == FORWARD_SERVO) {
-		float visual_servo_dist = Visual_Servo::calculate_distance(msg.x,msg.y,640,700);
-		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,640,700,curr_heading);
+	if(detection && !isDownServo)
+	{
+		float visual_servo_dist = Visual_Servo::calculate_distance(msg.x,msg.y,msg.x_center,msg.y_center);
+		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center,curr_heading);
+		dis_to_dest = visual_servo_dist;
+		head_to_dest = visual_servo_angle;
 		bool servo_completed = Motor::motor_speed_visual_servo(visual_servo_dist, 
 									 						   curr_heading, visual_servo_angle, 
 									 						   &left_motor,&right_motor,elapsedTime);
-		if (servo_completed) {
-			curr_state = MOVE_TO_DOWNWARD;
-			select_camera(DOWNWARD_CAMERA);
-			left_motor =  64 + 3;
-			right_motor = 64 + 3;
-		}
 	}
-
-	if (curr_state == DOWNWARD_SERVO) {
-		float visual_servo_dist = Visual_Servo::calculate_distance(msg.x,msg.y,640,300);
-		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,640,300,curr_heading);
+	else if(!detection && isDownServo)
+	{
+		Motor::move_forward_blind(&left_motor, &right_motor);
+	}
+	else if(detection && isDownServo)
+	{
+		float visual_servo_dist = Visual_Servo::calculate_distance(msg.x,msg.y,msg.x_center,msg.y_center);
+		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center,curr_heading);
+		dis_to_dest = visual_servo_dist;
+		head_to_dest = visual_servo_angle;
 		bool servo_completed = Motor::motor_speed_visual_servo(visual_servo_dist, 
 									 						   curr_heading, visual_servo_angle, 
 									 						   &left_motor,&right_motor,elapsedTime);
 		if (servo_completed) {
 			curr_state = ARM_PICKUP;
+			left_motor =  64;
+			right_motor = 64;
 		}
 	}
-
+	else if(curr_state == LITTER_PICKUP && !detection && !isDownServo)
+	{
+		curr_state = GET_GPS_LOCK;
+	}
 	if (curr_state == ARM_PICKUP) {
 		navigation::Arm arm_msg;
 		arm_msg.x = msg.x;
@@ -210,17 +193,18 @@ void arduino_callback(const arduino_pc::Arduino arduino_msg)
 	
 	elapsedTime = elapsedTime - arduino_msg.elapsed_time;
 	
-	dis_to_dest = GPS::distanceBetween(curr_lat, curr_long, dest_lat, dest_long);
-	head_to_dest = GPS::courseTo(curr_lat, curr_long, dest_lat, dest_long)-((obs_magnitude/obs_magnitude_modifier)*(obs_direction));
-	
+	//dis_to_dest = GPS::distanceBetween(curr_lat, curr_long, dest_lat, dest_long);
+	//head_to_dest = GPS::courseTo(curr_lat, curr_long, dest_lat, dest_long)-((obs_magnitude/obs_magnitude_modifier)*(obs_direction));
+
 	if (sats != 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT)) {
 		curr_state = GET_GPS_LOCK;
+		Motor::motor_stop(&left_motor,&right_motor);
 	}
 	if (sats == 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT)) {
-		curr_state = MOVE_TO_WAYPOINT;
-		select_camera(FORWARD_CAMERA);		
+		curr_state = MOVE_TO_WAYPOINT;	
+		Motor::motor_speed_navigation(dis_to_dest,curr_heading,head_to_dest,&left_motor,&right_motor,elapsedTime);
 	}
-	calculate_motor_speed();
+
 	if(dis_to_dest < 3) {
 		curr_ind++;
 		dest_lat = lat_list[curr_ind % 2];
@@ -265,31 +249,6 @@ void joystick_callback(const sensor_msgs::Joy::ConstPtr& joy)
 	Motor::motor_speed_joystick(joy->axes[2],joy->axes[1],max_speed_teleop,&left_motor,&right_motor);	
 }
 
-//yolo_callback for detections
-void yolo_callback(const yolo2::ImageDetections detection_msg) {
-	if (detection_msg.num_detections > 0) {
-		if (curr_state == MOVE_TO_WAYPOINT) {
-			curr_state = FORWARD_SERVO;
-		} else if (curr_state == MOVE_TO_DOWNWARD) {
-			curr_state = DOWNWARD_SERVO;
-		} else if (curr_state == CLASSIFICATION) {
-			bool isLitter = false;
-			int classID;
-			float confidence;
-			for (int i = 0; i < detection_msg.num_detections; i++) {
-				classID = detection_msg.detections[i].class_id;
-				confidence = detection_msg.detections[i].confidence;
-				if ((classID == 0 || classID == 1) && confidence > MIN_CONFIDENCE)
-					curr_state = ARM_PICKUP;
-			}
-			if (curr_state != ARM_PICKUP) {
-				curr_state = MOVE_TO_WAYPOINT;
-				select_camera(FORWARD_CAMERA);
-			}
-		}
-	}
-}
-
 // Desired heading to change from desired heading to motor commands
 void obstacle_heading_callback(const obstacle_avoidance::ObstacleHeading obstacle_heading_msg) 
 {
@@ -316,7 +275,6 @@ void arm_state_callback(const std_msgs::String arm_state_msg) {
 	} else {
 		navigation_msg.relay_state = false;
 		curr_state = MOVE_TO_WAYPOINT;
-		select_camera(FORWARD_CAMERA);
 	}
 }
 
@@ -328,7 +286,6 @@ int main(int argc, char **argv) {
   //Publisher registration
   navigation_pub = n.advertise<navigation::Navigation>("navigation", 1000);
   debug_pub = n.advertise<navigation::Debug>("debug", 1000);
-  camera_select_pub = n.advertise<std_msgs::Int8>("vision/yolo2/camera_select", 1000);
   arm_pub = n.advertise<navigation::Arm>("arm", 1000);
 
   //Subscriber registration
@@ -336,8 +293,7 @@ int main(int argc, char **argv) {
   arm_state_sub = n.subscribe("arm_state", 1000, arm_state_callback);
   joystick_sub = n.subscribe("joy", 1000, joystick_callback);
   obstacle_heading_sub = n.subscribe("obstacle_heading", 1000, obstacle_heading_callback);
-  object_track_sub = n.subscribe("object_track", 1000, object_track_callback);
-  yolo_sub = n.subscribe("vision/yolo2/detections", 1000, yolo_callback);
+  object_track_sub = n.subscribe("bbox", 1000, object_track_callback);
 
   ros::Rate loop_rate(10);
 

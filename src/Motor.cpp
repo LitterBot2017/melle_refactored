@@ -13,8 +13,8 @@ PID turn_pid_navigation = PID(0, 10, 0.01, 0, 0, MAX_TURNING_SPEED_NAVIGATION, -
 PID_horz forward_pid_navigation = PID_horz(0, 10, 0.01, 0, 0, MAX_FORWARD_SPEED_NAVIGATION, -1 * MAX_FORWARD_SPEED_NAVIGATION);
 //////
 #define MAX_TURNING_SPEED_SERVO 8
-#define MAX_FORWARD_SPEED_SERVO 8
-PID turn_pid_servo = PID(0, 10, 0.01, 0, 0, MAX_TURNING_SPEED_SERVO, -1 * MAX_TURNING_SPEED_SERVO);
+#define MAX_FORWARD_SPEED_SERVO 4
+PID turn_pid_servo = PID(5, 20, 0.01, 0, 0, MAX_TURNING_SPEED_SERVO, -1 * MAX_TURNING_SPEED_SERVO);
 PID_horz forward_pid_servo = PID_horz(0, 10, 0.01, 0, 0, MAX_FORWARD_SPEED_SERVO, -1 * MAX_FORWARD_SPEED_SERVO);
 
 void Motor::motor_speed_navigation(float dist, float curr_heading, float dest_heading,float* left_motor, float* right_motor, long elapsedTime)
@@ -41,8 +41,8 @@ bool Motor::motor_speed_visual_servo(float dist, float curr_angle, float dest_an
 {
 	float turn_speed = turn_pid_servo.getNewValue(curr_angle, dest_angle, elapsedTime);
 	float forward_speed = forward_pid_servo.getNewValue(dist, elapsedTime);
-	turn_speed = turn_speed/2;
-	forward_speed = forward_speed/2;
+	turn_speed = turn_speed;
+	forward_speed = forward_speed;
 	*left_motor = 64 - forward_speed - turn_speed;
 	*right_motor = 64 - forward_speed + turn_speed;
 
@@ -78,4 +78,36 @@ void Motor::motor_stop(float* left_motor, float* right_motor)
 {
 	*left_motor = 64;
 	*right_motor = 64;
+}
+
+bool Motor::motor_turn(float x, float y, float x_center, float y_center,float* left_motor, float* right_motor)
+{
+	if(x-x_center>50)
+	{
+		*left_motor =  64 + 4;
+  		*right_motor = 64 - 4;
+	}
+	else if(x-x_center<50)
+	{
+		*left_motor =  64 - 4;
+  		*right_motor = 64 + 4;
+	}
+	if(x<x_center+50 && x>x_center-50)
+	{
+		if(y-y_center>50)
+		{
+			*left_motor =  64 - 6;
+  			*right_motor = 64 - 6;
+		}
+		else if(y-y_center<50)
+		{
+			*left_motor =  64 + 6;
+  			*right_motor = 64 + 6;
+		}
+	}
+	if(x<x_center+50 && x>x_center-50 && y<y_center+50 && y>y_center-50)
+	{
+		return true;
+	}	
+	return false;
 }

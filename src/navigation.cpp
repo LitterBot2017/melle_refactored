@@ -141,9 +141,10 @@ void object_track_callback(const object_tracker::BBox msg) {
 		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center,curr_heading);
 		dis_to_dest = visual_servo_dist;
 		head_to_dest = visual_servo_angle;
-		bool servo_completed = Motor::motor_speed_visual_servo(visual_servo_dist, 
-									 						   curr_heading, visual_servo_angle, 
-									 						   &left_motor,&right_motor,elapsedTime);
+		bool servo_completed = Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
+		// Motor::motor_speed_visual_servo(visual_servo_dist, 
+		//							 						   curr_heading, visual_servo_angle, 
+		//							 						   &left_motor,&right_motor,elapsedTime);
 	}
 	else if(!detection && isDownServo)
 	{
@@ -155,9 +156,10 @@ void object_track_callback(const object_tracker::BBox msg) {
 		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center,curr_heading);
 		dis_to_dest = visual_servo_dist;
 		head_to_dest = visual_servo_angle;
-		bool servo_completed = Motor::motor_speed_visual_servo(visual_servo_dist, 
-									 						   curr_heading, visual_servo_angle, 
-									 						   &left_motor,&right_motor,elapsedTime);
+		bool servo_completed = Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
+							//Motor::motor_speed_visual_servo(visual_servo_dist, 
+							//		 						   curr_heading, visual_servo_angle, 
+							//		 						   &left_motor,&right_motor,elapsedTime);
 		if (servo_completed) {
 			curr_state = ARM_PICKUP;
 			left_motor =  64;

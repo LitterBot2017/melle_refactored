@@ -10,6 +10,7 @@ class Motor{
 		static void motor_speed_joystick(float angular_input, float linear_input, int max_speed_teleop, float* left_motor, float* right_motor);
 		static void move_forward_blind(float* left_motor, float* right_motor);
 		static void motor_stop(float* left_motor, float* right_motor);
+		static bool motor_turn(float x, float y, float x_center, float y_center,float* left_motor, float* right_motor);
 };
 
 #endif /* MOTOR_H_ */

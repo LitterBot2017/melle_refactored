@@ -14,6 +14,7 @@ add_message_files(
   Navigation.msg
   Debug.msg
   Arm.msg
+  Arduino.msg
 )
 
 generate_messages(

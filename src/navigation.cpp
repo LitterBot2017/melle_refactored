@@ -1,6 +1,6 @@
 #include "ros/ros.h"
 
-#include "arduino_pc/Arduino.h"
+#include "navigation/Arduino.h"
 
 #include "navigation/Navigation.h"
 #include "navigation/Debug.h"
@@ -26,20 +26,6 @@ using namespace std;
 #define JOYSTICK 3
 #define LITTER_PICKUP 4
 #define ARM_PICKUP 8
-
-// Camera Indices
-#define DOWNWARD_CAMERA 0
-#define FORWARD_CAMERA 1
-
-// Image sizes
-#define DOWNWARD_WIDTH 1280
-#define DOWNWARD_HEIGHT 470
-#define FORWARD_WIDTH 1280
-#define FORWARD_HEIGHT 720
-#define SERVO_TOLERANCE 50
-
-// Litter Classification Confidence Threshold
-#define MIN_CONFIDENCE 0.80
 
 int curr_state = GET_GPS_LOCK;
 
@@ -131,6 +117,17 @@ void object_track_callback(const object_tracker::BBox msg) {
 
 	bool detection = msg.detection;
 	bool isDownServo = msg.down_servo;
+	if (curr_state == ARM_PICKUP) {
+		navigation::Arm arm_msg;
+		arm_msg.x = msg.x;
+		arm_msg.y = msg.y;
+		arm_msg.is_centered = "centered";
+		navigation_msg.relay_state = true;
+		left_motor = 64;
+		right_motor = 64;
+		arm_pub.publish(arm_msg);
+		return;
+	}
 	if (curr_state != LITTER_PICKUP && detection && curr_state != JOYSTICK)
 		curr_state = LITTER_PICKUP;
 	if (curr_state == JOYSTICK)
@@ -170,20 +167,10 @@ void object_track_callback(const object_tracker::BBox msg) {
 	{
 		curr_state = GET_GPS_LOCK;
 	}
-	if (curr_state == ARM_PICKUP) {
-		navigation::Arm arm_msg;
-		arm_msg.x = msg.x;
-		arm_msg.y = msg.y;
-		arm_msg.is_centered = "centered";
-		navigation_msg.relay_state = true;
-		left_motor = 64;
-		right_motor = 64;
-		arm_pub.publish(arm_msg);
-	}
 }
 
 // Arduino Callback
-void arduino_callback(const arduino_pc::Arduino arduino_msg)
+void arduino_callback(const navigation::Arduino arduino_msg)
 {
 	curr_heading = arduino_msg.heading;
 	curr_long = arduino_msg.curr_long;

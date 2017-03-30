@@ -1,7 +1,6 @@
 #include "ros/ros.h"
 
 #include "navigation/Arduino.h"
-
 #include "navigation/Navigation.h"
 #include "navigation/Debug.h"
 #include "navigation/Arm.h"
@@ -44,8 +43,8 @@ float curr_heading;
 float dest_lat = lat_list[curr_ind];
 float dest_long = long_list[curr_ind];
 long elapsedTime;
-float dis_to_dest;
-float head_to_dest;
+float dis_to_dest=1000;
+float head_to_dest=1000;
 float obs_direction;
 float obs_magnitude;
 float obs_magnitude_modifier = 30;
@@ -117,6 +116,7 @@ void object_track_callback(const object_tracker::BBox msg) {
 
 	bool detection = msg.detection;
 	bool isDownServo = msg.down_servo;
+	bool ready_for_pickup = msg.ready_for_pickup;
 	if (curr_state == ARM_PICKUP) {
 		navigation::Arm arm_msg;
 		arm_msg.x = msg.x;
@@ -132,13 +132,20 @@ void object_track_callback(const object_tracker::BBox msg) {
 		curr_state = LITTER_PICKUP;
 	if (curr_state == JOYSTICK)
 		return;
+	if (ready_for_pickup)
+	{
+		curr_state = ARM_PICKUP;
+		left_motor =  64;
+		right_motor = 64;
+		return;
+	}
 	if(detection && !isDownServo)
 	{
 		float visual_servo_dist = Visual_Servo::calculate_distance(msg.x,msg.y,msg.x_center,msg.y_center);
 		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center,curr_heading);
 		dis_to_dest = visual_servo_dist;
 		head_to_dest = visual_servo_angle;
-		bool servo_completed = Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
+		Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
 		// Motor::motor_speed_visual_servo(visual_servo_dist, 
 		//							 						   curr_heading, visual_servo_angle, 
 		//							 						   &left_motor,&right_motor,elapsedTime);
@@ -153,15 +160,10 @@ void object_track_callback(const object_tracker::BBox msg) {
 		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center,curr_heading);
 		dis_to_dest = visual_servo_dist;
 		head_to_dest = visual_servo_angle;
-		bool servo_completed = Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
+		Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
 							//Motor::motor_speed_visual_servo(visual_servo_dist, 
 							//		 						   curr_heading, visual_servo_angle, 
 							//		 						   &left_motor,&right_motor,elapsedTime);
-		if (servo_completed) {
-			curr_state = ARM_PICKUP;
-			left_motor =  64;
-			right_motor = 64;
-		}
 	}
 	else if(curr_state == LITTER_PICKUP && !detection && !isDownServo)
 	{
@@ -177,13 +179,11 @@ void arduino_callback(const navigation::Arduino arduino_msg)
 	curr_lat = arduino_msg.curr_lat;
 	speed = arduino_msg.speed_val;
 	sats = arduino_msg.sats;
-
-	navigation_msg.waypoint_id = 10;
 	
 	elapsedTime = elapsedTime - arduino_msg.elapsed_time;
 	
-	//dis_to_dest = GPS::distanceBetween(curr_lat, curr_long, dest_lat, dest_long);
-	//head_to_dest = GPS::courseTo(curr_lat, curr_long, dest_lat, dest_long)-((obs_magnitude/obs_magnitude_modifier)*(obs_direction));
+	dis_to_dest = GPS::distanceBetween(curr_lat, curr_long, dest_lat, dest_long);
+	head_to_dest = GPS::courseTo(curr_lat, curr_long, dest_lat, dest_long)-((obs_magnitude/obs_magnitude_modifier)*(obs_direction));
 
 	if (sats != 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT)) {
 		curr_state = GET_GPS_LOCK;
@@ -250,7 +250,7 @@ void publish_navigation_message() {
     navigation_msg.r_motor_val = right_motor;
     navigation_msg.dest_lat = head_to_dest;
     navigation_msg.dest_long = dis_to_dest;
-    navigation_msg.waypoint_id = curr_state;
+    navigation_msg.waypoint_id = curr_ind;
 
     navigation_pub.publish(navigation_msg);
 }

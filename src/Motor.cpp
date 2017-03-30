@@ -70,8 +70,8 @@ void Motor::motor_speed_joystick(float angular_input, float linear_input, int ma
 
 void Motor::move_forward_blind(float* left_motor, float* right_motor)
 {
-	*left_motor = 74;
-	*right_motor = 74;
+	*left_motor = 70;
+	*right_motor = 70;
 }
 
 void Motor::motor_stop(float* left_motor, float* right_motor)
@@ -84,25 +84,25 @@ bool Motor::motor_turn(float x, float y, float x_center, float y_center,float* l
 {
 	if(x-x_center>50)
 	{
-		*left_motor =  64 + 4;
-  		*right_motor = 64 - 4;
+		*left_motor =  64 + 6;
+  		*right_motor = 64 - 6;
 	}
 	else if(x-x_center<50)
 	{
-		*left_motor =  64 - 4;
-  		*right_motor = 64 + 4;
+		*left_motor =  64 - 6;
+  		*right_motor = 64 + 6;
 	}
 	if(x<x_center+50 && x>x_center-50)
 	{
 		if(y-y_center>50)
 		{
-			*left_motor =  64 - 4;
-  			*right_motor = 64 - 4;
+			*left_motor =  64 - 8;
+  			*right_motor = 64 - 8;
 		}
 		else if(y-y_center<50)
 		{
-			*left_motor =  64 + 4;
-  			*right_motor = 64 + 4;
+			*left_motor =  64 + 8;
+  			*right_motor = 64 + 8;
 		}
 	}
 	if(x<x_center+50 && x>x_center-50 && y<y_center+50 && y>y_center-50)

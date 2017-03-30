@@ -4,8 +4,7 @@
   <include file="$(find obstacle_avoidance)/launch/obstacle_avoidance.launch"/>
   <include file="$(find yolo2)/launch/yolo2.launch"/>
   <include file="$(find object_tracker)/launch/object_tracker.launch"/>
-  <node name="navigation" pkg="navigation" type="navigation">
-  </node>
+  <node name="navigation" pkg="navigation" type="navigation"></node>
 
   <node respawn="true" pkg="joy"
         type="joy_node" name="joy_node" >

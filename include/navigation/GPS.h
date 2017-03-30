@@ -12,6 +12,7 @@ class GPS {
 	public:
 		static double distanceBetween(double lat1, double long1, double lat2, double long2);
 		static double courseTo(double lat1, double long1, double lat2, double long2);
+		static double convertCurrHeading(double currHeading);
 };
 
 #endif /* GPS_H_ */

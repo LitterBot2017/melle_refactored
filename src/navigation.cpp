@@ -123,8 +123,7 @@ void object_track_callback(const object_tracker::BBox msg) {
 		arm_msg.y = msg.y;
 		arm_msg.is_centered = "centered";
 		navigation_msg.relay_state = true;
-		left_motor = 64;
-		right_motor = 64;
+		Motor::motor_stop(&left_motor,&right_motor);
 		arm_pub.publish(arm_msg);
 		return;
 	}
@@ -135,8 +134,7 @@ void object_track_callback(const object_tracker::BBox msg) {
 	if (ready_for_pickup)
 	{
 		curr_state = ARM_PICKUP;
-		left_motor =  64;
-		right_motor = 64;
+		Motor::motor_stop(&left_motor,&right_motor);
 		return;
 	}
 	if(detection && !isDownServo)
@@ -145,6 +143,7 @@ void object_track_callback(const object_tracker::BBox msg) {
 		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center,curr_heading);
 		dis_to_dest = visual_servo_dist;
 		head_to_dest = visual_servo_angle;
+		downview_state = "Forward servo";
 		Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
 		// Motor::motor_speed_visual_servo(visual_servo_dist, 
 		//							 						   curr_heading, visual_servo_angle, 
@@ -153,13 +152,15 @@ void object_track_callback(const object_tracker::BBox msg) {
 	else if(!detection && isDownServo)
 	{
 		Motor::move_forward_blind(&left_motor, &right_motor);
+		downview_state = "Switch cam";
 	}
 	else if(detection && isDownServo)
 	{
 		float visual_servo_dist = Visual_Servo::calculate_distance(msg.x,msg.y,msg.x_center,msg.y_center);
 		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center,curr_heading);
 		dis_to_dest = visual_servo_dist;
-		head_to_dest = visual_servo_angle;
+		head_to_dest = visual_servo_angle;		
+		downview_state = "Downward servo";
 		Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
 							//Motor::motor_speed_visual_servo(visual_servo_dist, 
 							//		 						   curr_heading, visual_servo_angle, 
@@ -174,7 +175,7 @@ void object_track_callback(const object_tracker::BBox msg) {
 // Arduino Callback
 void arduino_callback(const navigation::Arduino arduino_msg)
 {
-	curr_heading = arduino_msg.heading;
+	curr_heading = (arduino_msg.heading);
 	curr_long = arduino_msg.curr_long;
 	curr_lat = arduino_msg.curr_lat;
 	speed = arduino_msg.speed_val;
@@ -183,7 +184,7 @@ void arduino_callback(const navigation::Arduino arduino_msg)
 	elapsedTime = elapsedTime - arduino_msg.elapsed_time;
 	
 	dis_to_dest = GPS::distanceBetween(curr_lat, curr_long, dest_lat, dest_long);
-	head_to_dest = GPS::courseTo(curr_lat, curr_long, dest_lat, dest_long)-((obs_magnitude/obs_magnitude_modifier)*(obs_direction));
+	head_to_dest = GPS::courseTo(curr_lat, curr_long, dest_lat, dest_long);//-((obs_magnitude/obs_magnitude_modifier)*(obs_direction));
 
 	if (sats != 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT)) {
 		curr_state = GET_GPS_LOCK;
@@ -251,7 +252,6 @@ void publish_navigation_message() {
     navigation_msg.dest_lat = head_to_dest;
     navigation_msg.dest_long = dis_to_dest;
     navigation_msg.waypoint_id = curr_ind;
-
     navigation_pub.publish(navigation_msg);
 }
 

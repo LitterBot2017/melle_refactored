@@ -25,6 +25,13 @@ float PID::getNewValue(float currHeading, float desiredHeading,float elapsedTime
 {
 	float newTurnSpeed;
 	float error=desiredHeading-currHeading;
+	if (error>180)
+	{
+		error = error - 360;
+	}
+	if (error < -180) {
+		error = error + 360;
+	}
 	if(abs(error)<5)
 	{
 		newTurnSpeed=0;

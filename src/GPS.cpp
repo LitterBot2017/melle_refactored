@@ -41,5 +41,18 @@ double GPS::courseTo(double lat1, double long1, double lat2, double long2) {
 	a2 += TWO_PI;
 	}
 	double turn_to_degrees=degrees(a2);
+	// if (turn_to_degrees > 180)
+	// {
+	// 	turn_to_degrees = turn_to_degrees - 360;
+	// }
 	return turn_to_degrees;
+}
+
+double GPS::convertCurrHeading(double currHeading)
+{
+	if (currHeading>180)
+	{
+		currHeading = currHeading - 360;
+	}
+	return currHeading;
 }

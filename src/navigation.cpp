@@ -15,7 +15,7 @@
 #include "GPS.h"
 #include "Motor.h"
 #include "Visual_Servo.h"
-
+#include "waypoints.h"
 
 using namespace std;
 
@@ -35,13 +35,16 @@ int curr_state = GET_GPS_LOCK;
 float lat_list [] = { 40.442222, 40.442072};
 float long_list [] = { -79.945563, -79.945515};
 
+
+Waypoints waypoints_list ;
+
 int curr_ind = 0;
 
 float curr_lat;
 float curr_long;
 float curr_heading;
-float dest_lat = lat_list[curr_ind];
-float dest_long = long_list[curr_ind];
+float dest_lat; //= waypoints_list.getWaypointFromIndex(curr_ind).lat_val;////lat_list[curr_ind];
+float dest_long;// = waypoints_list.getWaypointFromIndex(curr_ind).long_val;////long_list[curr_ind];
 long elapsedTime;
 float dis_to_dest=1000;
 float head_to_dest=1000;
@@ -118,7 +121,7 @@ void object_track_callback(const object_tracker::BBox msg) {
 	bool isDownServo = msg.down_servo;
 	bool ready_for_pickup = msg.ready_for_pickup;
 	if (curr_state == ARM_PICKUP) {
-		navigation::Arm arm_msg;
+		//navigation::Arm arm_msg;
 		arm_msg.x = msg.x;
 		arm_msg.y = msg.y;
 		arm_msg.is_centered = "centered";
@@ -197,16 +200,18 @@ void arduino_callback(const navigation::Arduino arduino_msg)
 
 	if(dis_to_dest < 3) {
 		curr_ind++;
-		dest_lat = lat_list[curr_ind % 2];
-		dest_long = long_list[curr_ind %2];
+		dest_lat = waypoints_list.getWaypointFromIndex(curr_ind).lat_val;////lat_list[curr_ind % 2];
+		dest_long = waypoints_list.getWaypointFromIndex(curr_ind).long_val;////long_list[curr_ind %2];
 	}
 
 	batt_level = arduino_msg.battery;
 	bin_fullness = arduino_msg.bin_fullness;
 	if(arduino_msg.pickup_state) {
 		arm_msg.pickup_state = "on";
+		//arm_pub.publish(arm_msg);
 	} else {
 		arm_msg.pickup_state = "off";
+		//arm_pub.publish(arm_msg);
 	}
 }
 
@@ -263,6 +268,8 @@ void arm_state_callback(const std_msgs::String arm_state_msg) {
 		navigation_msg.relay_state = true;
 	} else {
 		navigation_msg.relay_state = false;
+		arm_msg.is_centered = "not_centered";
+		arm_pub.publish(arm_msg);
 		curr_state = MOVE_TO_WAYPOINT;
 	}
 }
@@ -271,7 +278,14 @@ int main(int argc, char **argv) {
 
   ros::init(argc, argv, "navigation");
   ros::NodeHandle n;
-
+  Waypoint start(40.441942,-79.943860);
+  Waypoint end(40.441546,-79.943296);
+  waypoints_list = Waypoints(start, end);
+  curr_ind = 0;
+  dest_lat = waypoints_list.uncoveredWaypoint[curr_ind].lat_val;
+  dest_long = waypoints_list.uncoveredWaypoint[curr_ind].long_val;////long_list[curr_ind];
+  cout<<dest_lat<<endl;
+  cout<<dest_long<<endl;
   //Publisher registration
   navigation_pub = n.advertise<navigation::Navigation>("navigation", 1000);
   debug_pub = n.advertise<navigation::Debug>("debug", 1000);

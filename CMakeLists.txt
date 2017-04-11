@@ -32,7 +32,7 @@ include_directories(
 )
 
 ## Declare a C++ executable
-add_executable(navigation src/navigation.cpp src/PID.cpp src/PID_horz.cpp src/GPS.cpp src/Motor.cpp src/Visual_Servo.cpp)
+add_executable(navigation src/navigation.cpp src/PID.cpp src/PID_horz.cpp src/GPS.cpp src/Motor.cpp src/Visual_Servo.cpp src/waypoints.cpp)
 add_dependencies(navigation ${catkin_EXPORTED_TARGETS})
 add_dependencies(navigation melle_obstacle_avoidance_generate_messages_cpp)
 add_dependencies(navigation yolo2_generate_messages_cpp)

@@ -278,8 +278,10 @@ int main(int argc, char **argv) {
 
   ros::init(argc, argv, "navigation");
   ros::NodeHandle n;
-  Waypoint start(40.441942,-79.943860);
-  Waypoint end(40.441546,-79.943296);
+  //Waypoint start(40.441942,-79.943860);
+  //Waypoint end(40.441546,-79.943296);
+  Waypoint start(40.442222,-79.945563);
+  Waypoint end(40.442072,-79.945515);
   waypoints_list = Waypoints(start, end);
   curr_ind = 0;
   dest_lat = waypoints_list.uncoveredWaypoint[curr_ind].lat_val;

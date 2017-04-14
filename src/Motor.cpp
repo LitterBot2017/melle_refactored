@@ -7,9 +7,9 @@
 using namespace std;
 
 //////Check these in navigation
-#define MAX_TURNING_SPEED_NAVIGATION 20
-#define MAX_FORWARD_SPEED_NAVIGATION 50
-PID turn_pid_navigation = PID(0, 25, 0.01, 0, 0, MAX_TURNING_SPEED_NAVIGATION, -1 * MAX_TURNING_SPEED_NAVIGATION);
+#define MAX_TURNING_SPEED_NAVIGATION 15
+#define MAX_FORWARD_SPEED_NAVIGATION 25
+PID turn_pid_navigation = PID(0, 15, 0.01, 0, 0, MAX_TURNING_SPEED_NAVIGATION, -1 * MAX_TURNING_SPEED_NAVIGATION);
 PID_horz forward_pid_navigation = PID_horz(0, 50, 10, 0, 0, MAX_FORWARD_SPEED_NAVIGATION, -1 * MAX_FORWARD_SPEED_NAVIGATION);
 //////
 #define MAX_TURNING_SPEED_SERVO 8
@@ -84,25 +84,25 @@ bool Motor::motor_turn(float x, float y, float x_center, float y_center,float* l
 {
 	if(x-x_center>50)
 	{
-		*left_motor =  64 + 4;
-  		*right_motor = 64 - 4;
+		*left_motor =  64 + 6;
+  		*right_motor = 64 - 6;
 	}
 	else if(x-x_center<50)
 	{
-		*left_motor =  64 - 4;
-  		*right_motor = 64 + 4;
+		*left_motor =  64 - 6;
+  		*right_motor = 64 + 6;
 	}
 	if(x<x_center+50 && x>x_center-50)
 	{
 		if(y-y_center>50)
 		{
-			*left_motor =  64 - 4;
-  			*right_motor = 64 - 4;
+			*left_motor =  64 - 7;
+  			*right_motor = 64 - 7;
 		}
 		else if(y-y_center<50)
 		{
-			*left_motor =  64 + 4;
-  			*right_motor = 64 + 4;
+			*left_motor =  64 + 7;
+  			*right_motor = 64 + 7;
 		}
 	}
 	if(x<x_center+50 && x>x_center-50 && y<y_center+50 && y>y_center-50)

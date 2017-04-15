@@ -7,9 +7,9 @@
 using namespace std;
 
 //////Check these in navigation
-#define MAX_TURNING_SPEED_NAVIGATION 15
-#define MAX_FORWARD_SPEED_NAVIGATION 25
-PID turn_pid_navigation = PID(0, 15, 0.01, 0, 0, MAX_TURNING_SPEED_NAVIGATION, -1 * MAX_TURNING_SPEED_NAVIGATION);
+#define MAX_TURNING_SPEED_NAVIGATION 10
+#define MAX_FORWARD_SPEED_NAVIGATION 20
+PID turn_pid_navigation = PID(0, 10, 0.01, 0, 0, MAX_TURNING_SPEED_NAVIGATION, -1 * MAX_TURNING_SPEED_NAVIGATION);
 PID_horz forward_pid_navigation = PID_horz(0, 50, 10, 0, 0, MAX_FORWARD_SPEED_NAVIGATION, -1 * MAX_FORWARD_SPEED_NAVIGATION);
 //////
 #define MAX_TURNING_SPEED_SERVO 8
@@ -70,8 +70,8 @@ void Motor::motor_speed_joystick(float angular_input, float linear_input, int ma
 
 void Motor::move_forward_blind(float* left_motor, float* right_motor)
 {
-	*left_motor = 70;
-	*right_motor = 70;
+	*left_motor = 72;
+	*right_motor = 72;
 }
 
 void Motor::motor_stop(float* left_motor, float* right_motor)

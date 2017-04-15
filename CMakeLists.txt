@@ -35,5 +35,6 @@ include_directories(
 add_executable(navigation src/navigation.cpp src/PID.cpp src/PID_horz.cpp src/GPS.cpp src/Motor.cpp src/Visual_Servo.cpp src/waypoints.cpp)
 add_dependencies(navigation ${catkin_EXPORTED_TARGETS})
 add_dependencies(navigation melle_obstacle_avoidance_generate_messages_cpp)
+add_dependencies(navigation heartbeat_generate_messages_cpp)
 add_dependencies(navigation yolo2_generate_messages_cpp)
 target_link_libraries(navigation ${catkin_LIBRARIES} )

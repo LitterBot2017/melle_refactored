@@ -5,6 +5,8 @@
 #include "navigation/Debug.h"
 #include "navigation/Arm.h"
 
+#include "heartbeat/Running.h"
+
 #include "object_tracker/BBox.h"
 #include "obstacle_avoidance/ObstacleHeading.h"
 #include "std_msgs/Int8.h"
@@ -64,12 +66,16 @@ string downview_state;
 //Debug mode
 bool enable_debug_mode = false;
 
+// Running (from heartbeat)
+bool is_running = false;
+
 //Subscribers
 ros::Subscriber arduino_sub;
 ros::Subscriber arm_state_sub;
 ros::Subscriber joystick_sub;
 ros::Subscriber obstacle_heading_sub;
 ros::Subscriber object_track_sub;
+ros::Subscriber running_sub;
 
 //Publishers
 ros::Publisher navigation_pub;
@@ -187,7 +193,7 @@ void arduino_callback(const navigation::Arduino arduino_msg)
 	elapsedTime = elapsedTime - arduino_msg.elapsed_time;
 	
 	dis_to_dest = GPS::distanceBetween(curr_lat, curr_long, dest_lat, dest_long);
-	head_to_dest = GPS::courseTo(curr_lat, curr_long, dest_lat, dest_long);//-((obs_magnitude/obs_magnitude_modifier)*(obs_direction));
+	head_to_dest = GPS::courseTo(curr_lat, curr_long, dest_lat, dest_long)+((obs_magnitude/obs_magnitude_modifier)*(obs_direction));
 
 	if (sats != 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT)) {
 		curr_state = GET_GPS_LOCK;
@@ -274,6 +280,17 @@ void arm_state_callback(const std_msgs::String arm_state_msg) {
 	}
 }
 
+void running_callback(const heartbeat::Running running_msg) {
+	if (!running_msg.is_running && is_running) {
+		curr_state = JOYSTICK;
+		//Motor::motor_speed_joystick(old_joy_angle,old_joy_linear,max_speed_teleop,&left_motor,&right_motor);	
+		is_running = false;
+	} else if (running_msg.is_running && !is_running) {
+		curr_state = GET_GPS_LOCK;
+		is_running = true;
+	}
+}
+
 int main(int argc, char **argv) {
 
   ros::init(argc, argv, "navigation");
@@ -281,7 +298,7 @@ int main(int argc, char **argv) {
   //Waypoint start(40.441942,-79.943860);
   //Waypoint end(40.441546,-79.943296);
   Waypoint start(40.442222,-79.945563);
-  Waypoint end(40.442072,-79.945515);
+  Waypoint end(40.442081,-79.945480);
   waypoints_list = Waypoints(start, end);
   curr_ind = 0;
   dest_lat = waypoints_list.uncoveredWaypoint[curr_ind].lat_val;
@@ -299,6 +316,7 @@ int main(int argc, char **argv) {
   joystick_sub = n.subscribe("joy", 1000, joystick_callback);
   obstacle_heading_sub = n.subscribe("obstacle_heading", 1000, obstacle_heading_callback);
   object_track_sub = n.subscribe("bbox", 1000, object_track_callback);
+  running_sub = n.subscribe("running", 1000, running_callback);
 
   ros::Rate loop_rate(10);
 

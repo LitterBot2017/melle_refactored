@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <launch>
 
+  <node name="cpr_mover" pkg="cpr_mover" type="cpr_mover">
+  </node>
+
+  <include file="$(find planning)/launch/melle_arm_interface_node.launch"/>  
+
   <include file="$(find obstacle_avoidance)/launch/obstacle_avoidance.launch"/>
   <include file="$(find yolo2)/launch/yolo2.launch"/>
   <include file="$(find object_tracker)/launch/object_tracker.launch"/>
@@ -15,7 +20,7 @@
   <!-- Startup your modified apriltag wrapper node -->
   <!-- TODO -->
   <node name="serial_node" pkg="rosserial_python" type="serial_node.py">
-  <param name="~port" value="/dev/arduino" />
+    <param name="~port" value="/dev/arduino" />
   </node>
 
 </launch>

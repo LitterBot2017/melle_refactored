@@ -4,6 +4,9 @@
   <node name="cpr_mover" pkg="cpr_mover" type="cpr_mover">
   </node>
 
+  <node name="heartbeat" pkg="heartbeat" type="heartbeat">
+  </node>
+
   <include file="$(find planning)/launch/melle_arm_interface_node.launch"/>  
 
   <include file="$(find obstacle_avoidance)/launch/obstacle_avoidance.launch"/>

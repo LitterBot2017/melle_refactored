@@ -28,7 +28,7 @@ using namespace std;
 #define LITTER_PICKUP 4
 #define ARM_PICKUP 8
 
-int curr_state = GET_GPS_LOCK;
+int curr_state = JOYSTICK;
 
 //GPS_Waypoints before 2/26/2017
 //float lat_list [] = { 40.4421768188, 40.4420509338, 40.442111969};
@@ -284,6 +284,7 @@ void running_callback(const heartbeat::Running running_msg) {
 	if (!running_msg.is_running && is_running) {
 		curr_state = JOYSTICK;
 		//Motor::motor_speed_joystick(old_joy_angle,old_joy_linear,max_speed_teleop,&left_motor,&right_motor);	
+		Motor::motor_stop(&left_motor,&right_motor);
 		is_running = false;
 	} else if (running_msg.is_running && !is_running) {
 		curr_state = GET_GPS_LOCK;

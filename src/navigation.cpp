@@ -149,14 +149,15 @@ void object_track_callback(const object_tracker::BBox msg) {
 	if(detection && !isDownServo)
 	{
 		float visual_servo_dist = Visual_Servo::calculate_distance(msg.x,msg.y,msg.x_center,msg.y_center);
-		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center,curr_heading);
+		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center);
 		dis_to_dest = visual_servo_dist;
 		head_to_dest = visual_servo_angle;
 		downview_state = "Forward servo";
-		Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
-		// Motor::motor_speed_visual_servo(visual_servo_dist, 
-		//							 						   curr_heading, visual_servo_angle, 
-		//							 						   &left_motor,&right_motor,elapsedTime);
+		//Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
+		//Motor::motor_stop(&left_motor,&right_motor);
+		Motor::motor_speed_visual_servo(visual_servo_dist,
+									 	0, visual_servo_angle, 
+									 	&left_motor,&right_motor,elapsedTime);
 	}
 	else if(!detection && isDownServo)
 	{
@@ -166,14 +167,14 @@ void object_track_callback(const object_tracker::BBox msg) {
 	else if(detection && isDownServo)
 	{
 		float visual_servo_dist = Visual_Servo::calculate_distance(msg.x,msg.y,msg.x_center,msg.y_center);
-		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center,curr_heading);
+		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center);
 		dis_to_dest = visual_servo_dist;
 		head_to_dest = visual_servo_angle;		
 		downview_state = "Downward servo";
 		Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
-							//Motor::motor_speed_visual_servo(visual_servo_dist, 
-							//		 						   curr_heading, visual_servo_angle, 
-							//		 						   &left_motor,&right_motor,elapsedTime);
+		// Motor::motor_speed_visual_servo(visual_servo_dist, 
+		// 		 						0, visual_servo_angle, 
+		// 		 						&left_motor,&right_motor,elapsedTime);
 	}
 	else if(curr_state == LITTER_PICKUP && !detection && !isDownServo)
 	{
@@ -192,8 +193,11 @@ void arduino_callback(const navigation::Arduino arduino_msg)
 	
 	elapsedTime = elapsedTime - arduino_msg.elapsed_time;
 	
-	dis_to_dest = GPS::distanceBetween(curr_lat, curr_long, dest_lat, dest_long);
-	head_to_dest = GPS::courseTo(curr_lat, curr_long, dest_lat, dest_long)+((obs_magnitude/obs_magnitude_modifier)*(obs_direction));
+	if(curr_state != LITTER_PICKUP)
+	{
+		dis_to_dest = GPS::distanceBetween(curr_lat, curr_long, dest_lat, dest_long);
+		head_to_dest = GPS::courseTo(curr_lat, curr_long, dest_lat, dest_long)+((obs_magnitude/obs_magnitude_modifier)*(obs_direction));	
+	}	
 
 	if (sats != 1 && (curr_state == GET_GPS_LOCK || curr_state == MOVE_TO_WAYPOINT)) {
 		curr_state = GET_GPS_LOCK;
@@ -319,7 +323,7 @@ int main(int argc, char **argv) {
   object_track_sub = n.subscribe("bbox", 1000, object_track_callback);
   running_sub = n.subscribe("running", 1000, running_callback);
 
-  ros::Rate loop_rate(10);
+  ros::Rate loop_rate(20);
 
   while(ros::ok()) {
   	publish_navigation_message();

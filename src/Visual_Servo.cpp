@@ -15,8 +15,8 @@ float Visual_Servo::calculate_distance(float x, float y, float x_center, float y
 
 float Visual_Servo::calculate_angle(float x, float y, float x_center, float y_center)
 {
-	float xdiff = x-x_center;
-	float ydiff = y-y_center;
-	float angle = atan2(xdiff,ydiff);
-	return -angle;
+	float xdiff = x_center-x;
+	float ydiff = y_center-y;
+	float angle = atan(xdiff/ydiff);
+	return -angle*57.3;
 }

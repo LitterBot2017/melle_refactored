@@ -7,14 +7,14 @@
 using namespace std;
 
 //////Check these in navigation
-#define MAX_TURNING_SPEED_NAVIGATION 6
-#define MAX_FORWARD_SPEED_NAVIGATION 17
+#define MAX_TURNING_SPEED_NAVIGATION 8
+#define MAX_FORWARD_SPEED_NAVIGATION 20
 PID turn_pid_navigation = PID(0, 10, 0.01, 0, 0, MAX_TURNING_SPEED_NAVIGATION, -1 * MAX_TURNING_SPEED_NAVIGATION);
 PID_horz forward_pid_navigation = PID_horz(0, 50, 10, 0, 0, MAX_FORWARD_SPEED_NAVIGATION, -1 * MAX_FORWARD_SPEED_NAVIGATION);
 //////
-#define MAX_TURNING_SPEED_SERVO 2
-#define MAX_FORWARD_SPEED_SERVO 4
-PID turn_pid_servo = PID(0, 0.6, 0.0002, 0, 0, MAX_TURNING_SPEED_SERVO, -1 * MAX_TURNING_SPEED_SERVO);
+#define MAX_TURNING_SPEED_SERVO 3
+#define MAX_FORWARD_SPEED_SERVO 6
+PID turn_pid_servo = PID(0, 0.5, 0.0002, 0, 0, MAX_TURNING_SPEED_SERVO, -1 * MAX_TURNING_SPEED_SERVO);
 PID_horz forward_pid_servo = PID_horz(0, 0.2, 0.0002, 0, 0, MAX_FORWARD_SPEED_SERVO, -1 * MAX_FORWARD_SPEED_SERVO);
 
 void Motor::motor_speed_navigation(float dist, float curr_heading, float dest_heading,float* left_motor, float* right_motor, long elapsedTime)
@@ -70,8 +70,8 @@ void Motor::motor_speed_joystick(float angular_input, float linear_input, int ma
 
 void Motor::move_forward_blind(float* left_motor, float* right_motor)
 {
-	*left_motor = 70;
-	*right_motor = 69;
+	*left_motor = 73;
+	*right_motor = 72;
 }
 
 void Motor::motor_stop(float* left_motor, float* right_motor)
@@ -96,13 +96,13 @@ bool Motor::motor_turn(float x, float y, float x_center, float y_center,float* l
 	{
 		if(y-y_center>50)
 		{
-			*left_motor =  64 - 5;
-  			*right_motor = 64 - 5;
+			*left_motor =  64 - 8;
+  			*right_motor = 64 - 8;
 		}
 		else if(y-y_center<50)
 		{
-			*left_motor =  64 + 5;
-  			*right_motor = 64 + 5;
+			*left_motor =  64 + 8;
+  			*right_motor = 64 + 8;
 		}
 	}
 	if(x<x_center+50 && x>x_center-50 && y<y_center+50 && y>y_center-50)

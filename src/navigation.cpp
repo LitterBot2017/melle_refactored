@@ -153,11 +153,11 @@ void object_track_callback(const object_tracker::BBox msg) {
 		dis_to_dest = visual_servo_dist;
 		head_to_dest = visual_servo_angle;
 		downview_state = "Forward servo";
-		//Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
+		Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
 		//Motor::motor_stop(&left_motor,&right_motor);
-		Motor::motor_speed_visual_servo(visual_servo_dist,
-									 	0, visual_servo_angle, 
-									 	&left_motor,&right_motor,elapsedTime);
+		// Motor::motor_speed_visual_servo(visual_servo_dist,
+		// 							 	0, visual_servo_angle, 
+		// 							 	&left_motor,&right_motor,elapsedTime);
 	}
 	else if(!detection && isDownServo)
 	{
@@ -302,8 +302,14 @@ int main(int argc, char **argv) {
   ros::NodeHandle n;
   //Waypoint start(40.441942,-79.943860);
   //Waypoint end(40.441546,-79.943296);
-  Waypoint start(40.442222,-79.945563);
-  Waypoint end(40.442081,-79.945480);
+  
+  // Wean Hall
+  //Waypoint start(40.442222,-79.945563);
+  //Waypoint end(40.442081,-79.945480);
+
+  // Soccer Field
+  Waypoint start(40.4428863525,-79.9390716553);
+  Waypoint end(40.4426956177,-79.9391403198);
   waypoints_list = Waypoints(start, end);
   curr_ind = 0;
   dest_lat = waypoints_list.uncoveredWaypoint[curr_ind].lat_val;

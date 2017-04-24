@@ -84,25 +84,25 @@ bool Motor::motor_turn(float x, float y, float x_center, float y_center,float* l
 {
 	if(x-x_center>50)
 	{
-		*left_motor =  64 + 4;
-  		*right_motor = 64 - 4;
+		*left_motor =  64 + 6;
+  		*right_motor = 64 - 6;
 	}
 	else if(x-x_center<50)
 	{
-		*left_motor =  64 - 4;
-  		*right_motor = 64 + 4;
+		*left_motor =  64 - 6;
+  		*right_motor = 64 + 6;
 	}
 	if(x<x_center+50 && x>x_center-50)
 	{
 		if(y-y_center>50)
 		{
-			*left_motor =  64 - 8;
-  			*right_motor = 64 - 8;
+			*left_motor =  64 - 9;
+  			*right_motor = 64 - 9;
 		}
 		else if(y-y_center<50)
 		{
-			*left_motor =  64 + 8;
-  			*right_motor = 64 + 8;
+			*left_motor =  64 + 9;
+  			*right_motor = 64 + 9;
 		}
 	}
 	if(x<x_center+50 && x>x_center-50 && y<y_center+50 && y>y_center-50)

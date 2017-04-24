@@ -151,13 +151,16 @@ void object_track_callback(const object_tracker::BBox msg) {
 		float visual_servo_dist = Visual_Servo::calculate_distance(msg.x,msg.y,msg.x_center,msg.y_center);
 		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center);
 		dis_to_dest = visual_servo_dist;
+		if(dis_to_dest < 0)
+			visual_servo_angle = -visual_servo_angle;
+		
 		head_to_dest = visual_servo_angle;
 		downview_state = "Forward servo";
-		Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
+		// Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);
 		//Motor::motor_stop(&left_motor,&right_motor);
-		// Motor::motor_speed_visual_servo(visual_servo_dist,
-		// 							 	0, visual_servo_angle, 
-		// 							 	&left_motor,&right_motor,elapsedTime);
+		Motor::motor_speed_visual_servo(visual_servo_dist,
+									 	0, visual_servo_angle, 
+									 	&left_motor,&right_motor,elapsedTime);
 	}
 	else if(!detection && isDownServo)
 	{
@@ -308,8 +311,9 @@ int main(int argc, char **argv) {
   //Waypoint end(40.442081,-79.945480);
 
   // Soccer Field
-  Waypoint start(40.4428863525,-79.9390716553);
-  Waypoint end(40.4426956177,-79.9391403198);
+  Waypoint start(40.4423942566,-79.938873291);
+  Waypoint end(40.4427490234,-79.9388961792);
+  
   waypoints_list = Waypoints(start, end);
   curr_ind = 0;
   dest_lat = waypoints_list.uncoveredWaypoint[curr_ind].lat_val;

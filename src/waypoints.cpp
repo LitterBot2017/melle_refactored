@@ -41,9 +41,9 @@ void Waypoints::generateWaypoints()
 	float totalXDist;
 	float totalYDist;
 	convertToMeter(wayStart,wayEnd,totalXDist, totalYDist);
-	int xGrid=fabs(floor(totalXDist/1));
+	int xGrid=fabs(floor(totalXDist/2));
 	xGrid = xGrid == 0 ? 1 : xGrid;
-	int yGrid=fabs(floor(totalYDist/1));
+	int yGrid=fabs(floor(totalYDist/2));
 	yGrid = yGrid == 0 ? 1 : yGrid;
 	this->uncoveredWaypoint = new Waypoint [xGrid*yGrid];
 	//this->coveredWaypoint [xGrid*yGrid];

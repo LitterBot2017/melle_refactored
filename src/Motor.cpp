@@ -70,7 +70,7 @@ void Motor::motor_speed_joystick(float angular_input, float linear_input, int ma
 
 void Motor::move_forward_blind(float* left_motor, float* right_motor)
 {
-	*left_motor = 73;
+	*left_motor = 74;
 	*right_motor = 72;
 }
 

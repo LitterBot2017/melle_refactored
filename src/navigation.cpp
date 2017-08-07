@@ -172,6 +172,8 @@ void object_track_callback(const object_tracker::BBox msg) {
 		float visual_servo_dist = Visual_Servo::calculate_distance(msg.x,msg.y,msg.x_center,msg.y_center);
 		float visual_servo_angle = Visual_Servo::calculate_angle(msg.x,msg.y,msg.x_center,msg.y_center);
 		dis_to_dest = visual_servo_dist;
+		if(dis_to_dest < 0)
+			visual_servo_angle = -visual_servo_angle;
 		head_to_dest = visual_servo_angle;		
 		downview_state = "Downward servo";
 		//Motor::motor_turn(msg.x,msg.y,msg.x_center,msg.y_center,&left_motor,&right_motor);

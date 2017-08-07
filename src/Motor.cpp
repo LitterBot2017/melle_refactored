@@ -12,8 +12,8 @@ using namespace std;
 PID turn_pid_navigation = PID(0, 10, 0.01, 0, 0, MAX_TURNING_SPEED_NAVIGATION, -1 * MAX_TURNING_SPEED_NAVIGATION);
 PID_horz forward_pid_navigation = PID_horz(0, 50, 10, 0, 0, MAX_FORWARD_SPEED_NAVIGATION, -1 * MAX_FORWARD_SPEED_NAVIGATION);
 //////
-#define MAX_TURNING_SPEED_SERVO 3
-#define MAX_FORWARD_SPEED_SERVO 6
+#define MAX_TURNING_SPEED_SERVO 4 
+#define MAX_FORWARD_SPEED_SERVO 5
 PID turn_pid_servo = PID(0, 0.5, 0.0002, 0, 0, MAX_TURNING_SPEED_SERVO, -1 * MAX_TURNING_SPEED_SERVO);
 PID_horz forward_pid_servo = PID_horz(0, 0.2, 0.0002, 0, 0, MAX_FORWARD_SPEED_SERVO, -1 * MAX_FORWARD_SPEED_SERVO);
 
@@ -70,8 +70,8 @@ void Motor::motor_speed_joystick(float angular_input, float linear_input, int ma
 
 void Motor::move_forward_blind(float* left_motor, float* right_motor)
 {
-	*left_motor = 74;
-	*right_motor = 72;
+	*left_motor = 71;
+	*right_motor = 70;
 }
 
 void Motor::motor_stop(float* left_motor, float* right_motor)

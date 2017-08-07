@@ -45,9 +45,9 @@ void Waypoints::generateWaypoints()
 	xGrid = xGrid == 0 ? 1 : xGrid;
 	int yGrid=fabs(floor(totalYDist/2));
 	yGrid = yGrid == 0 ? 1 : yGrid;
-	this->uncoveredWaypoint = new Waypoint [xGrid*yGrid];
+	this->totalPoints=(xGrid*yGrid) + ((xGrid - 1) * yGrid);
+	this->uncoveredWaypoint = new Waypoint [this->totalPoints];
 	//this->coveredWaypoint [xGrid*yGrid];
-	this->totalPoints=xGrid*yGrid;
 	this->coveredPointer=0;
 	this->uncoveredPointer=0;
 	cout<<"totalYDist"<<totalYDist<<endl;
@@ -64,6 +64,7 @@ void Waypoints::generateWaypoints()
 	Waypoint nextWay;
 	float lastY=wayStart.long_val;
 	bool addOrMinus=false;
+	int counter = 0;
 	for(int i=0;i<xGrid;i++)
 	{
 		float newXPoint=(i*oneLatStep)+wayStart.lat_val;
@@ -81,12 +82,36 @@ void Waypoints::generateWaypoints()
 				newYPoint=-(j*oneLongStep)+lastY;
 			nextWay.lat_val=newXPoint;
 			nextWay.long_val=newYPoint;
-			this->uncoveredWaypoint[(i*yGrid)+j]=nextWay;
-
+			this->uncoveredWaypoint[counter]=nextWay;
+			counter++;
 		}
 
 		lastY=newYPoint;
 	}
+	for(int i=xGrid-1; i>0; i--)
+	{
+		float newXPoint=(i*oneLatStep - (oneLatStep/2)) + wayStart.lat_val;
+		if(addOrMinus==false)
+			addOrMinus=true;
+		else
+			addOrMinus=false;
+		float newYPoint;
+		for(int j=0;j<yGrid;j++)
+		{
+
+			if(addOrMinus)
+				newYPoint=(j*oneLongStep)+lastY;
+			else
+				newYPoint=-(j*oneLongStep)+lastY;
+			nextWay.lat_val=newXPoint;
+			nextWay.long_val=newYPoint;
+			this->uncoveredWaypoint[counter]=nextWay;
+			counter++;
+		}
+		cout << counter << endl;
+		lastY=newYPoint;
+	}
+
 	for (int i = 0;  i < this->numOfPoints(); i++) {
 		cout << i << " = (" << this->getWaypointFromIndex(i).lat_val << ", " << this->getWaypointFromIndex(i).long_val << ")" << endl;
 	}
